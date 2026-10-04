@@ -1,0 +1,7 @@
+{
+  "name": "Roll",
+  "description": "Automatic wallpaper rotation app for Android with independent home and lock screen timers, unlock trigger, and widget.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Sun -->
+    <path
+        android:fillColor="#E8834A"
+        android:pathData="M24,9 A8,8 0 1,0 24,25 A8,8 0 1,0 24,9 Z" />
+    <!-- Distant Sea Wave -->
+    <path
+        android:fillColor="#8AB7C7"
+        android:pathData="M4,28 C10,24 18,30 26,27 C34,24 40,27 44,28 L44,40 L4,40 Z" />
+    <!-- Foreground Rolling Dune / Hill -->
+    <path
+        android:fillColor="#3A2F22"
+        android:pathData="M4,34 C12,31 22,38 32,33 C38,30 42,32 44,34 L44,44 L4,44 Z" />
+</vector>

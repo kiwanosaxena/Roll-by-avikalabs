@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 3D Glass Sphere Outer Boundary Ring -->
+    <path
+        android:pathData="M54,25 A29,29 0 1,0 54,83 A29,29 0 1,0 54,25 Z"
+        android:strokeColor="#38BDF8"
+        android:strokeAlpha="0.35"
+        android:strokeWidth="1.2" />
+
+    <!-- Orbital Roll Motion Arrow 1 (Bottom-left to Top) -->
+    <path
+        android:pathData="M28,64 C23,50 31,34 45,26.5"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M41,25 L46,26.2 L43,30.5"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Orbital Roll Motion Arrow 2 (Top-right to Bottom) -->
+    <path
+        android:pathData="M80,44 C85,58 77,74 63,81.5"
+        android:strokeColor="#818CF8"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M67,83 L62,81.8 L65,77.5"
+        android:strokeColor="#818CF8"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- BACK CARD: Starry Night Wallpaper -->
+    <!-- Card Body -->
+    <path
+        android:pathData="M35,27 H53 A5,5 0 0 1 58,32 V60 A5,5 0 0 1 53,65 H35 A5,5 0 0 1 30,60 V32 A5,5 0 0 1 35,27 Z"
+        android:fillColor="#1A203C"
+        android:strokeColor="#53649E"
+        android:strokeWidth="1.0" />
+    <!-- Night Silhouette Mountain -->
+    <path
+        android:pathData="M30,56 C36,52 44,58 52,54 C54.5,52.8 56.5,53.5 58,54.5 V60 A5,5 0 0 1 53,65 H35 A5,5 0 0 1 30,60 Z"
+        android:fillColor="#0E1224" />
+    <!-- Glowing Crescent Moon -->
+    <path
+        android:pathData="M47,32 C44.5,32 42.5,34 42.5,36.5 C42.5,39 44.5,41 47,41 C48.5,41 49.8,40.3 50.5,39.1 C48.3,38.8 46.5,36.9 46.5,34.5 C46.5,33.6 46.8,32.7 47,32 Z"
+        android:fillColor="#FDE047" />
+    <!-- Twinkling Stars -->
+    <path
+        android:pathData="M36,33 L36.7,34.3 L38,35 L36.7,35.7 L36,37 L35.3,35.7 L34,35 L35.3,34.3 Z"
+        android:fillColor="#E2E8F0" />
+    <path
+        android:pathData="M40,42.5 L40.5,43.5 L41.5,44 L40.5,44.5 L40,45.5 L39.5,44.5 L38.5,44 L39.5,43.5 Z"
+        android:fillColor="#CBD5E1" />
+    <path
+        android:pathData="M53,43 L53.4,43.6 L54,44 L53.4,44.4 L53,45 L52.6,44.4 L52,44 L52.6,43.6 Z"
+        android:fillColor="#94A3B8" />
+
+    <!-- FRONT CARD: Golden Landscape Wallpaper -->
+    <!-- Drop Shadow behind Front Card -->
+    <path
+        android:pathData="M55,39 H73 A5,5 0 0 1 78,44 V72 A5,5 0 0 1 73,77 H55 A5,5 0 0 1 50,72 V44 A5,5 0 0 1 55,39 Z"
+        android:fillColor="#50000000" />
+    <!-- Card Body (Warm Sky) -->
+    <path
+        android:pathData="M54,37 H72 A5,5 0 0 1 77,42 V70 A5,5 0 0 1 72,75 H54 A5,5 0 0 1 49,70 V42 A5,5 0 0 1 54,37 Z"
+        android:fillColor="#FED7AA" />
+    <!-- Sun Corona & Core -->
+    <path
+        android:pathData="M63,42 A6.5,6.5 0 1,0 63,55 A6.5,6.5 0 1,0 63,42 Z"
+        android:fillColor="#FDBA74" />
+    <path
+        android:pathData="M63,44.5 A4,4 0 1,0 63,52.5 A4,4 0 1,0 63,44.5 Z"
+        android:fillColor="#F59E0B" />
+    <!-- Landscape Dune 1 (Terracotta) -->
+    <path
+        android:pathData="M49,58 C55,53 65,60 73,56 C74.8,55 76,55.8 77,56.5 V70 A5,5 0 0 1 72,75 H54 A5,5 0 0 1 49,70 Z"
+        android:fillColor="#EA580C" />
+    <!-- Landscape Dune 2 (Golden Sand) -->
+    <path
+        android:pathData="M49,63 C56,59 66,65 74,62 C75.5,61.5 76.4,62 77,62.5 V70 A5,5 0 0 1 72,75 H54 A5,5 0 0 1 49,70 Z"
+        android:fillColor="#D97706" />
+    <!-- Ocean Wave (Azure Blue) -->
+    <path
+        android:pathData="M49,68 C56,65 67,69 74,67 C75.6,66.5 76.5,67 77,67.3 V70 A5,5 0 0 1 72,75 H54 A5,5 0 0 1 49,70 Z"
+        android:fillColor="#0284C7" />
+    <!-- Front Card Glossy Rim / Border -->
+    <path
+        android:pathData="M54,37 H72 A5,5 0 0 1 77,42 V70 A5,5 0 0 1 72,75 H54 A5,5 0 0 1 49,70 V42 A5,5 0 0 1 54,37 Z"
+        android:strokeColor="#FFFFFF"
+        android:strokeAlpha="0.65"
+        android:strokeWidth="1.0" />
+
+    <!-- 3D Glass Sphere Refraction & Specular Highlights -->
+    <!-- Top curved glass gloss sheen -->
+    <path
+        android:pathData="M36,28 C45,25 63,25 72,28 C66,32 52,34 36,28 Z"
+        android:fillColor="#45FFFFFF" />
+    <!-- Diagonal subtle gloss stripe -->
+    <path
+        android:pathData="M34,35 L42,30 C58,34 68,44 74,54 L69,58 C64,48 50,38 34,35 Z"
+        android:fillColor="#18FFFFFF" />
+    <!-- Bottom rim reflection -->
+    <path
+        android:pathData="M44,80 C50,82 58,82 64,80 C60,78 48,78 44,80 Z"
+        android:fillColor="#25FFFFFF" />
+
+</vector>
