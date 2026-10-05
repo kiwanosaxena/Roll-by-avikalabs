@@ -223,6 +223,7 @@ fun MainAppContent(
                             WallpaperApplier.launchLiveWallpaperPicker(context)
                         },
                         onAddTileClick = { showActionSheet = true },
+                        onRemoveItem = { viewModel.removeItem(it, uiState.activeTarget) },
                         onNextClick = {
                             if (uiState.activeTarget == WallpaperTarget.LOCK && activeConfig.autoChangeOnUnlock && isLiveWallpaperActive) {
                                 // Skip Duration setup per PRD §6 & §7.2

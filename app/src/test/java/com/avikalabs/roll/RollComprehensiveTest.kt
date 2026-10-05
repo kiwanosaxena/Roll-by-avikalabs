@@ -291,4 +291,32 @@ class RollComprehensiveTest {
         assertTrue(executed)
         composeTestRule.onNodeWithTag("dialog_roll_set").assertExists()
     }
+
+    @Test
+    fun `test picker screen long press photo card shows remove menu and removes item`() {
+        val items = listOf(
+            WallpaperItem(id = "item_1", uri = "content://media/1", target = WallpaperTarget.HOME, durationSeconds = 900, sortIndex = 0)
+        )
+        var removedId: String? = null
+        composeTestRule.setContent {
+            com.avikalabs.roll.ui.screens.PickerScreen(
+                activeTarget = WallpaperTarget.HOME,
+                items = items,
+                autoChangeOnUnlock = false,
+                isLiveWallpaperActive = false,
+                onTargetSelected = {},
+                onAutoChangeOnUnlockToggle = {},
+                onSetLiveWallpaperClick = {},
+                onAddTileClick = {},
+                onRemoveItem = { removedId = it },
+                onNextClick = {}
+            )
+        }
+        composeTestRule.onNodeWithTag("photo_card_item_1").performTouchInput {
+            longClick()
+        }
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("action_remove_from_roll_item_1").performClick()
+        assertEquals("item_1", removedId)
+    }
 }

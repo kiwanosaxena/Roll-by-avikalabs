@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,24 +24,35 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -74,6 +86,7 @@ fun PickerScreen(
     onAutoChangeOnUnlockToggle: (Boolean) -> Unit,
     onSetLiveWallpaperClick: () -> Unit,
     onAddTileClick: () -> Unit,
+    onRemoveItem: (String) -> Unit = {},
     onNextClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -107,6 +120,7 @@ fun PickerScreen(
                 activeTarget = activeTarget,
                 autoChangeOnUnlock = autoChangeOnUnlock && isLiveWallpaperActive,
                 onAddTileClick = onAddTileClick,
+                onRemoveItem = onRemoveItem,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -208,6 +222,7 @@ fun PhotoGrid(
     activeTarget: WallpaperTarget,
     autoChangeOnUnlock: Boolean,
     onAddTileClick: () -> Unit,
+    onRemoveItem: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyVerticalGrid(
@@ -220,7 +235,8 @@ fun PhotoGrid(
         items(items, key = { it.id }) { item ->
             ThumbnailItem(
                 item = item,
-                isUnlockMode = (activeTarget == WallpaperTarget.LOCK && autoChangeOnUnlock)
+                isUnlockMode = (activeTarget == WallpaperTarget.LOCK && autoChangeOnUnlock),
+                onRemove = { onRemoveItem(item.id) }
             )
         }
 
@@ -234,56 +250,117 @@ fun PhotoGrid(
 @Composable
 private fun ThumbnailItem(
     item: WallpaperItem,
-    isUnlockMode: Boolean
+    isUnlockMode: Boolean,
+    onRemove: () -> Unit
 ) {
-    GlassBox(
+    val glassColors = LocalGlassColors.current
+    val haptics = LocalHapticFeedback.current
+    var showMenu by remember { mutableStateOf(false) }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(5f / 7f), // Portrait card ratio
-        shape = RoundedCornerShape(14.dp)
+            .aspectRatio(5f / 7f)
     ) {
-        AsyncImage(
-            model = item.uri,
-            contentDescription = "Wallpaper frame",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // Corner duration badge (top-end)
-        val durationLabel = if (isUnlockMode) "unlock" else DurationFormatter.formatShort(item.durationSeconds)
-        Box(
+        GlassBox(
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(8.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color.Black.copy(alpha = 0.65f))
-                .border(0.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                .padding(horizontal = 6.dp, vertical = 3.dp)
+                .fillMaxSize()
+                .clip(RoundedCornerShape(14.dp))
+                .pointerInput(item.id) {
+                    detectTapGestures(
+                        onLongPress = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            showMenu = true
+                        }
+                    )
+                }
+                .semantics {
+                    customActions = listOf(
+                        CustomAccessibilityAction("Remove from roll") {
+                            onRemove()
+                            true
+                        }
+                    )
+                }
+                .testTag("photo_card_${item.id}"),
+            shape = RoundedCornerShape(14.dp)
         ) {
-            Text(
-                text = durationLabel,
-                style = MonospaceBadgeStyle.copy(color = Color.White, fontSize = 10.5.sp)
+            AsyncImage(
+                model = item.uri,
+                contentDescription = "Wallpaper frame",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
-        }
 
-        // Folder badge if imported via SAF folder (§7.2)
-        if (item.sourceFolderUri != null) {
+            // Corner duration badge (top-end)
+            val durationLabel = if (isUnlockMode) "unlock" else DurationFormatter.formatShort(item.durationSeconds)
             Box(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
+                    .align(Alignment.TopEnd)
                     .padding(8.dp)
                     .clip(RoundedCornerShape(6.dp))
                     .background(Color.Black.copy(alpha = 0.65f))
                     .border(0.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                .padding(4.dp)
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Folder,
-                    contentDescription = "Imported from synced folder",
-                    tint = Color.White,
-                    modifier = Modifier.size(14.dp)
+                Text(
+                    text = durationLabel,
+                    style = MonospaceBadgeStyle.copy(color = Color.White, fontSize = 10.5.sp)
                 )
             }
+
+            // Folder badge if imported via SAF folder (§7.2)
+            if (item.sourceFolderUri != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.Black.copy(alpha = 0.65f))
+                        .border(0.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                        .padding(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Folder,
+                        contentDescription = "Imported from synced folder",
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+
+        // Long press dropdown menu
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+            modifier = Modifier
+                .background(glassColors.glassFillElevated)
+                .border(1.dp, glassColors.glassBorder, RoundedCornerShape(12.dp))
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = "Remove from roll",
+                        color = AccentSunset,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.DeleteOutline,
+                        contentDescription = null,
+                        tint = AccentSunset,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                onClick = {
+                    showMenu = false
+                    onRemove()
+                },
+                modifier = Modifier.testTag("action_remove_from_roll_${item.id}")
+            )
         }
     }
 }
