@@ -26,11 +26,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.TouchApp
@@ -401,7 +401,7 @@ fun SettingsScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Icon(
-                        imageVector = Icons.Outlined.OpenInNew,
+                        imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
                         contentDescription = null,
                         tint = glassColors.textSecondary,
                         modifier = Modifier.size(16.dp)
@@ -447,18 +447,5 @@ private fun checkIsLiveWallpaperActive(context: Context): Boolean {
 }
 
 private fun launchLiveWallpaperPicker(context: Context) {
-    try {
-        val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
-            putExtra(
-                WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
-                ComponentName(context, RollLiveWallpaperService::class.java)
-            )
-        }
-        context.startActivity(intent)
-    } catch (_: Exception) {
-        try {
-            val fallbackIntent = Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER)
-            context.startActivity(fallbackIntent)
-        } catch (_: Exception) {}
-    }
+    WallpaperApplier.launchLiveWallpaperPicker(context)
 }

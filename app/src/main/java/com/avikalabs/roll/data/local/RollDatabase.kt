@@ -40,7 +40,7 @@ class RollTypeConverters {
         SyncedFolder::class
     ],
     version = 1,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(RollTypeConverters::class)
 abstract class RollDatabase : RoomDatabase() {
@@ -57,7 +57,7 @@ abstract class RollDatabase : RoomDatabase() {
                     context.applicationContext,
                     RollDatabase::class.java,
                     "roll_database.db"
-                ).fallbackToDestructiveMigration().build()
+                ).build()
                 INSTANCE = instance
                 instance
             }

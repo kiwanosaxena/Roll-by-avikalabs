@@ -32,13 +32,12 @@ class BootReceiver : BroadcastReceiver() {
                         scheduler.scheduleNextRotation(WallpaperTarget.HOME, duration)
                     }
 
-                    // Reschedule LOCK rotation if duration-based, or enable unlock monitoring service
+                    // Reschedule LOCK rotation if duration-based
+                    repository.disableUnlockModeIfLiveWallpaperInactive()
                     val lockItems = repository.getItemsByTargetSync(WallpaperTarget.LOCK)
                     val lockConfig = repository.getRotationConfigSync(WallpaperTarget.LOCK)
                     if (lockItems.isNotEmpty() && lockConfig != null) {
-                        if (lockConfig.autoChangeOnUnlock) {
-                            com.avikalabs.roll.service.RollUnlockService.updateServiceState(context)
-                        } else {
+                        if (!lockConfig.autoChangeOnUnlock) {
                             val duration = if (lockConfig.durationMode == com.avikalabs.roll.data.model.DurationMode.GLOBAL) {
                                 lockConfig.globalDurationSeconds
                             } else {

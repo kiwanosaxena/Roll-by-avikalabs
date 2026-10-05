@@ -10,8 +10,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -107,7 +105,6 @@ object DialMath {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DialControl(
     durationSeconds: Int,
@@ -288,28 +285,62 @@ fun DialControl(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Preset chips row for quick selection & TalkBack accessibility (§7.3.3)
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            maxItemsInEachRow = 6
-        ) {
-            val presets = listOf(
-                15 to "15s",
-                60 to "1m",
-                300 to "5m",
-                900 to "15m",
-                1800 to "30m",
-                3600 to "60m"
-            )
+        // Preset chips for quick selection & TalkBack accessibility (§7.3.3)
+        val presets = listOf(
+            15 to "15s",
+            60 to "1m",
+            300 to "5m",
+            900 to "15m",
+            1800 to "30m",
+            3600 to "60m"
+        )
 
-            presets.forEach { (secs, label) ->
-                val isSelected = durationSeconds == secs
-                PresetChip(
-                    label = label,
-                    isSelected = isSelected,
-                    onClick = { onDurationChanged(secs) }
-                )
+        if (sizeDp <= 160) {
+            val row1 = presets.take(3)
+            val row2 = presets.drop(3)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    row1.forEach { (secs, label) ->
+                        PresetChip(
+                            label = label,
+                            isSelected = durationSeconds == secs,
+                            onClick = { onDurationChanged(secs) }
+                        )
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    row2.forEach { (secs, label) ->
+                        PresetChip(
+                            label = label,
+                            isSelected = durationSeconds == secs,
+                            onClick = { onDurationChanged(secs) }
+                        )
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                presets.forEach { (secs, label) ->
+                    PresetChip(
+                        label = label,
+                        isSelected = durationSeconds == secs,
+                        onClick = { onDurationChanged(secs) }
+                    )
+                }
             }
         }
     }

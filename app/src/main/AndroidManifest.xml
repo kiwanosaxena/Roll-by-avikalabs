@@ -3,9 +3,6 @@
 
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".RollApplication"
@@ -49,12 +46,6 @@
                 <action android:name="com.avikalabs.roll.ACTION_WIDGET_ADVANCE" />
             </intent-filter>
         </receiver>
-
-        <!-- Device Unlock Foreground Service for dynamic unlock monitoring when Live Wallpaper is not active -->
-        <service
-            android:name=".service.RollUnlockService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false" />
 
         <!-- Boot Receiver for WorkManager & Unlock scheduling -->
         <receiver

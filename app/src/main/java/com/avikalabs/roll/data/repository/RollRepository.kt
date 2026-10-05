@@ -191,7 +191,13 @@ class RollRepository private constructor(
                 scheduler.scheduleNextRotation(target, duration)
             }
         }
-        com.avikalabs.roll.service.RollUnlockService.updateServiceState(context)
+    }
+
+    suspend fun disableUnlockModeIfLiveWallpaperInactive() = withContext(Dispatchers.IO) {
+        val lockConfig = dao.getRotationConfigSync(WallpaperTarget.LOCK) ?: return@withContext
+        if (lockConfig.autoChangeOnUnlock && !WallpaperApplier.isLiveWallpaperActive(context)) {
+            setAutoChangeOnUnlock(false)
+        }
     }
 
     suspend fun reorderItems(target: WallpaperTarget, reorderedList: List<WallpaperItem>) = withContext(Dispatchers.IO) {
@@ -330,8 +336,6 @@ class RollRepository private constructor(
             val nextTime = System.currentTimeMillis() + (duration * 1000L)
             dao.updateNextScheduledAt(target, nextTime)
             scheduler.scheduleNextRotation(target, duration)
-        } else {
-            com.avikalabs.roll.service.RollUnlockService.updateServiceState(context)
         }
         success
     }

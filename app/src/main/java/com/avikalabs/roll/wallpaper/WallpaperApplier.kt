@@ -1,7 +1,10 @@
 package com.avikalabs.roll.wallpaper
 
+import android.app.Activity
 import android.app.WallpaperManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -25,6 +28,30 @@ object WallpaperApplier {
             info != null && info.packageName == context.packageName
         } catch (_: Exception) {
             false
+        }
+    }
+
+    fun launchLiveWallpaperPicker(context: Context) {
+        try {
+            val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER).apply {
+                putExtra(
+                    WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
+                    ComponentName(context, RollLiveWallpaperService::class.java)
+                )
+                if (context !is Activity) {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            try {
+                val fallbackIntent = Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER).apply {
+                    if (context !is Activity) {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                }
+                context.startActivity(fallbackIntent)
+            } catch (_: Exception) {}
         }
     }
 

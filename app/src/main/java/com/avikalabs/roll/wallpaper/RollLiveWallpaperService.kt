@@ -18,7 +18,6 @@ import android.view.SurfaceHolder
 import com.avikalabs.roll.data.model.WallpaperTarget
 import com.avikalabs.roll.data.repository.RollRepository
 import com.avikalabs.roll.receiver.UnlockReceiver
-import com.avikalabs.roll.service.RollUnlockService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,13 +35,11 @@ class RollLiveWallpaperService : WallpaperService() {
     override fun onCreate() {
         super.onCreate()
         registerUnlockReceiver()
-        RollUnlockService.updateServiceState(applicationContext)
     }
 
     override fun onDestroy() {
         unregisterUnlockReceiver()
         super.onDestroy()
-        RollUnlockService.updateServiceState(applicationContext)
     }
 
     private fun registerUnlockReceiver() {

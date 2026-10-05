@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -44,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.avikalabs.roll.R
 import com.avikalabs.roll.data.model.WallpaperItem
 import com.avikalabs.roll.data.model.WallpaperTarget
 import com.avikalabs.roll.ui.components.DurationFormatter
@@ -66,8 +69,10 @@ fun PickerScreen(
     activeTarget: WallpaperTarget,
     items: List<WallpaperItem>,
     autoChangeOnUnlock: Boolean,
+    isLiveWallpaperActive: Boolean,
     onTargetSelected: (WallpaperTarget) -> Unit,
     onAutoChangeOnUnlockToggle: (Boolean) -> Unit,
+    onSetLiveWallpaperClick: () -> Unit,
     onAddTileClick: () -> Unit,
     onNextClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -100,7 +105,7 @@ fun PickerScreen(
             PhotoGrid(
                 items = items,
                 activeTarget = activeTarget,
-                autoChangeOnUnlock = autoChangeOnUnlock,
+                autoChangeOnUnlock = autoChangeOnUnlock && isLiveWallpaperActive,
                 onAddTileClick = onAddTileClick,
                 modifier = Modifier
                     .weight(1f)
@@ -110,29 +115,70 @@ fun PickerScreen(
 
         // 3. Lock screen auto change on unlock option (§7.1 / §7.2)
         if (activeTarget == WallpaperTarget.LOCK) {
+            val isEnabled = isLiveWallpaperActive
+            val isChecked = autoChangeOnUnlock && isLiveWallpaperActive
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 6.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable { onAutoChangeOnUnlockToggle(!autoChangeOnUnlock) }
+                    .then(
+                        if (isEnabled) {
+                            Modifier.clickable { onAutoChangeOnUnlockToggle(!autoChangeOnUnlock) }
+                        } else {
+                            Modifier
+                        }
+                    )
                     .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Checkbox(
-                    checked = autoChangeOnUnlock,
-                    onCheckedChange = onAutoChangeOnUnlockToggle,
+                    checked = isChecked,
+                    onCheckedChange = if (isEnabled) {
+                        { onAutoChangeOnUnlockToggle(it) }
+                    } else null,
+                    enabled = isEnabled,
                     colors = CheckboxDefaults.colors(
                         checkedColor = AccentSunset,
                         uncheckedColor = glassColors.textSecondary
                     )
                 )
-                Text(
-                    text = "Auto change on device unlock",
-                    fontSize = 13.sp,
-                    color = glassColors.textPrimary,
-                    modifier = Modifier.padding(start = 6.dp)
-                )
+                Column(
+                    modifier = Modifier
+                        .padding(start = 6.dp)
+                        .weight(1f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.auto_change_on_unlock),
+                        fontSize = 13.sp,
+                        color = if (isEnabled) glassColors.textPrimary else glassColors.textSecondary.copy(alpha = 0.6f)
+                    )
+                    if (!isEnabled) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.unlock_requires_live_wallpaper),
+                                fontSize = 11.5.sp,
+                                color = glassColors.textSecondary
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = stringResource(R.string.action_set_live_wallpaper),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = AccentSunset,
+                                modifier = Modifier
+                                    .clickable(role = Role.Button) {
+                                        onSetLiveWallpaperClick()
+                                    }
+                                    .padding(vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
 

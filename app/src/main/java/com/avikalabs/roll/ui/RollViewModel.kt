@@ -12,6 +12,7 @@ import com.avikalabs.roll.data.model.RotationConfig
 import com.avikalabs.roll.data.model.WallpaperItem
 import com.avikalabs.roll.data.model.WallpaperTarget
 import com.avikalabs.roll.data.repository.RollRepository
+import com.avikalabs.roll.wallpaper.WallpaperApplier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +42,16 @@ class RollViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _bannerMessage = MutableStateFlow<String?>(null)
     val bannerMessage: StateFlow<String?> = _bannerMessage.asStateFlow()
+
+    private val _isLiveWallpaperActive = MutableStateFlow(WallpaperApplier.isLiveWallpaperActive(application))
+    val isLiveWallpaperActive: StateFlow<Boolean> = _isLiveWallpaperActive.asStateFlow()
+
+    fun refreshLiveWallpaperState() {
+        _isLiveWallpaperActive.value = WallpaperApplier.isLiveWallpaperActive(getApplication())
+        viewModelScope.launch {
+            repository.disableUnlockModeIfLiveWallpaperInactive()
+        }
+    }
 
     val uiState: StateFlow<RollUiState> = combine(
         _activeTarget,

@@ -218,7 +218,7 @@ fun TheRollScreen(
                                 onRemoveItem(item.id)
                             },
                             modifier = Modifier
-                                .then(if (isBeingDragged) Modifier else Modifier.animateItemPlacement())
+                                .then(if (isBeingDragged) Modifier else Modifier.animateItem())
                                 .onSizeChanged { if (it.height > 0) rowHeightPx = it.height.toFloat() }
                                 .zIndex(if (isBeingDragged) 10f else 1f)
                         )

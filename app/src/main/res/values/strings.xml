@@ -20,6 +20,8 @@
     <!-- Picker -->
     <string name="selected_count_format">%1$d selected</string>
     <string name="auto_change_on_unlock">Auto change on device unlock</string>
+    <string name="unlock_requires_live_wallpaper">Only works while Roll is your live wallpaper.</string>
+    <string name="action_set_live_wallpaper">Set live wallpaper</string>
     <string name="btn_next">Next</string>
     <string name="disabled_reason_add_photos">Add at least one photo first</string>
     <string name="action_choose_photos">Choose photos</string>

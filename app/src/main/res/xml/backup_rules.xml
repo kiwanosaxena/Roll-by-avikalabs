@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Back up user preferences only. All other domains (including database) are excluded so invalid photo URIs won't be restored -->
+    <!-- Back up user preferences and datastore. All other domains (including database) are excluded so invalid photo URIs won't be restored -->
     <include domain="sharedpref" path="." />
+    <include domain="file" path="datastore/" />
 </full-backup-content>

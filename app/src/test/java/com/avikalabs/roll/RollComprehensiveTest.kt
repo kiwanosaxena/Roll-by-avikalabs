@@ -2,6 +2,7 @@ package com.avikalabs.roll
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.ui.test.*
 import androidx.test.core.app.ApplicationProvider
 import com.avikalabs.roll.data.local.RollDatabase
 import com.avikalabs.roll.data.local.ThemeMode
@@ -10,7 +11,6 @@ import com.avikalabs.roll.data.model.WallpaperItem
 import com.avikalabs.roll.data.model.WallpaperTarget
 import com.avikalabs.roll.data.repository.RollRepository
 import com.avikalabs.roll.receiver.UnlockReceiver
-import com.avikalabs.roll.service.RollUnlockService
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -118,9 +118,14 @@ class RollComprehensiveTest {
     }
 
     @Test
-    fun `test roll unlock service state update helper`() {
-        // Calling updateServiceState should run cleanly without throwing
-        RollUnlockService.updateServiceState(context)
+    fun `test disableUnlockModeIfLiveWallpaperInactive switches unlock off when not active`() = runBlocking {
+        repository.setAutoChangeOnUnlock(true)
+        val before = repository.getRotationConfigSync(WallpaperTarget.LOCK)
+        assertTrue(before!!.autoChangeOnUnlock)
+
+        repository.disableUnlockModeIfLiveWallpaperInactive()
+        val after = repository.getRotationConfigSync(WallpaperTarget.LOCK)
+        assertFalse(after!!.autoChangeOnUnlock)
     }
 
     @Test
@@ -180,8 +185,110 @@ class RollComprehensiveTest {
         assertEquals("x1", remaining[0].id)
     }
 
+    @get:org.junit.Rule
+    val composeTestRule = androidx.compose.ui.test.junit4.createComposeRule()
+
     @Test
     fun `test widget action receiver action string`() {
         assertEquals("com.avikalabs.roll.ACTION_WIDGET_ADVANCE", com.avikalabs.roll.widget.RollWidgetActionReceiver.ACTION_WIDGET_ADVANCE)
+    }
+
+    @Test
+    fun `test main activity launch`() {
+        org.robolectric.Robolectric.buildActivity(MainActivity::class.java).setup()
+    }
+
+    @Test
+    fun `test duration setup screen rendering and interaction`() {
+        val items = listOf(
+            WallpaperItem(id = "item_1", uri = "content://media/1", target = WallpaperTarget.HOME, durationSeconds = 900, sortIndex = 0),
+            WallpaperItem(id = "item_2", uri = "content://media/2", target = WallpaperTarget.HOME, durationSeconds = 900, sortIndex = 1)
+        )
+        val config = com.avikalabs.roll.data.model.RotationConfig(WallpaperTarget.HOME)
+        var nextClicked = false
+        composeTestRule.setContent {
+            com.avikalabs.roll.ui.screens.DurationSetupScreen(
+                target = WallpaperTarget.HOME,
+                items = items,
+                config = config,
+                onDurationModeChanged = {},
+                onItemDurationChanged = { _, _ -> },
+                onApplyGlobalDuration = {},
+                onNextClick = { nextClicked = true }
+            )
+        }
+        composeTestRule.onNodeWithTag("btn_duration_next").performClick()
+        assertTrue(nextClicked)
+    }
+
+    @Test
+    fun `test duration setup screen flip card on tap`() {
+        val items = listOf(
+            WallpaperItem(id = "item_1", uri = "content://media/1", target = WallpaperTarget.HOME, durationSeconds = 900, sortIndex = 0)
+        )
+        val config = com.avikalabs.roll.data.model.RotationConfig(WallpaperTarget.HOME)
+        composeTestRule.setContent {
+            com.avikalabs.roll.ui.screens.DurationSetupScreen(
+                target = WallpaperTarget.HOME,
+                items = items,
+                config = config,
+                onDurationModeChanged = {},
+                onItemDurationChanged = { _, _ -> },
+                onApplyGlobalDuration = {},
+                onNextClick = {}
+            )
+        }
+        composeTestRule.onNodeWithContentDescription("Tap to set duration").performClick()
+        composeTestRule.mainClock.advanceTimeBy(600)
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun `test duration setup screen global mode rendering`() {
+        val items = listOf(
+            WallpaperItem(id = "item_1", uri = "content://media/1", target = WallpaperTarget.HOME, durationSeconds = 900, sortIndex = 0)
+        )
+        val config = com.avikalabs.roll.data.model.RotationConfig(
+            target = WallpaperTarget.HOME,
+            durationMode = com.avikalabs.roll.data.model.DurationMode.GLOBAL
+        )
+        composeTestRule.setContent {
+            com.avikalabs.roll.ui.screens.DurationSetupScreen(
+                target = WallpaperTarget.HOME,
+                items = items,
+                config = config,
+                onDurationModeChanged = {},
+                onItemDurationChanged = { _, _ -> },
+                onApplyGlobalDuration = {},
+                onNextClick = {}
+            )
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun `test the roll screen rendering and execute button`() {
+        val items = listOf(
+            WallpaperItem(id = "item_1", uri = "content://media/1", target = WallpaperTarget.HOME, durationSeconds = 900, sortIndex = 0),
+            WallpaperItem(id = "item_2", uri = "content://media/2", target = WallpaperTarget.HOME, durationSeconds = 900, sortIndex = 1)
+        )
+        val config = com.avikalabs.roll.data.model.RotationConfig(WallpaperTarget.HOME)
+        var executed = false
+        composeTestRule.setContent {
+            com.avikalabs.roll.ui.screens.TheRollScreen(
+                activeTarget = WallpaperTarget.HOME,
+                items = items,
+                config = config,
+                onTargetSelected = {},
+                onPlaybackOrderChanged = {},
+                onReorderItems = {},
+                onRemoveItem = {},
+                onAddFrameClick = {},
+                onExecuteClick = { executed = true }
+            )
+        }
+        composeTestRule.onNodeWithTag("btn_execute").performClick()
+        assertTrue(executed)
+        composeTestRule.onNodeWithTag("dialog_roll_set").assertExists()
     }
 }

@@ -35,12 +35,7 @@ android {
       isMinifyEnabled = true
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      val keystoreFile = file(System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks")
-      if (keystoreFile.exists()) {
-        signingConfig = signingConfigs.getByName("release")
-      } else {
-        signingConfig = signingConfigs.getByName("debug")
-      }
+      signingConfig = signingConfigs.getByName("release")
     }
   }
   compileOptions {
@@ -100,4 +95,15 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.tooling)
 
   "ksp"(libs.androidx.room.compiler)
+}
+
+ksp {
+  arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+gradle.taskGraph.whenReady {
+  if (allTasks.any { it.name.contains("Release") }) {
+    val ks = file(System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks")
+    require(ks.exists()) { "Release keystore not found at ${ks.path}. Set KEYSTORE_PATH, STORE_PASSWORD and KEY_PASSWORD." }
+  }
 }

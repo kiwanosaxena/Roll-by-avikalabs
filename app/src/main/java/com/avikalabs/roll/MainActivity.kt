@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +76,7 @@ import com.avikalabs.roll.ui.screens.TheRollScreen
 import com.avikalabs.roll.ui.theme.AccentSunset
 import com.avikalabs.roll.ui.theme.LocalGlassColors
 import com.avikalabs.roll.ui.theme.RollTheme
+import com.avikalabs.roll.wallpaper.WallpaperApplier
 
 class MainActivity : ComponentActivity() {
 
@@ -94,6 +96,11 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshLiveWallpaperState()
     }
 }
 
@@ -116,6 +123,8 @@ fun MainAppContent(
     val currentRoute = navBackStackEntry?.destination?.route
 
     val glassColors = LocalGlassColors.current
+    val context = LocalContext.current
+    val isLiveWallpaperActive by viewModel.isLiveWallpaperActive.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showActionSheet by remember { mutableStateOf(false) }
 
@@ -207,11 +216,15 @@ fun MainAppContent(
                         activeTarget = uiState.activeTarget,
                         items = activeItems,
                         autoChangeOnUnlock = activeConfig.autoChangeOnUnlock,
+                        isLiveWallpaperActive = isLiveWallpaperActive,
                         onTargetSelected = { viewModel.setActiveTarget(it) },
                         onAutoChangeOnUnlockToggle = { viewModel.setAutoChangeOnUnlock(it) },
+                        onSetLiveWallpaperClick = {
+                            WallpaperApplier.launchLiveWallpaperPicker(context)
+                        },
                         onAddTileClick = { showActionSheet = true },
                         onNextClick = {
-                            if (uiState.activeTarget == WallpaperTarget.LOCK && activeConfig.autoChangeOnUnlock) {
+                            if (uiState.activeTarget == WallpaperTarget.LOCK && activeConfig.autoChangeOnUnlock && isLiveWallpaperActive) {
                                 // Skip Duration setup per PRD §6 & §7.2
                                 navController.navigate(NavRoutes.THE_ROLL)
                             } else {

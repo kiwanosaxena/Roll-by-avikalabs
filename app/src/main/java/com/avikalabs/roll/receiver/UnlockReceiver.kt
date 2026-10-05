@@ -19,7 +19,7 @@ class UnlockReceiver : BroadcastReceiver() {
             }
             lastUnlockTime = now
 
-            val pendingResult = goAsync()
+            val pendingResult = try { goAsync() } catch (_: Exception) { null }
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val repository = RollRepository.getInstance(context)
@@ -28,7 +28,7 @@ class UnlockReceiver : BroadcastReceiver() {
                         repository.advanceRotation(WallpaperTarget.LOCK, isScheduledTrigger = false)
                     }
                 } finally {
-                    pendingResult.finish()
+                    pendingResult?.finish()
                 }
             }
         }
