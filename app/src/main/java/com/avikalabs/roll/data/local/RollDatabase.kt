@@ -6,8 +6,11 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.avikalabs.roll.data.model.DurationMode
 import com.avikalabs.roll.data.model.PlaybackOrder
+import com.avikalabs.roll.data.model.RemovedUri
 import com.avikalabs.roll.data.model.RotationConfig
 import com.avikalabs.roll.data.model.SyncedFolder
 import com.avikalabs.roll.data.model.WallpaperItem
@@ -37,9 +40,10 @@ class RollTypeConverters {
     entities = [
         WallpaperItem::class,
         RotationConfig::class,
-        SyncedFolder::class
+        SyncedFolder::class,
+        RemovedUri::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(RollTypeConverters::class)
@@ -48,6 +52,12 @@ abstract class RollDatabase : RoomDatabase() {
     abstract fun rollDao(): RollDao
 
     companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `removed_uris` (`uri` TEXT NOT NULL, PRIMARY KEY(`uri`))")
+            }
+        }
+
         @Volatile
         private var INSTANCE: RollDatabase? = null
 
@@ -57,7 +67,9 @@ abstract class RollDatabase : RoomDatabase() {
                     context.applicationContext,
                     RollDatabase::class.java,
                     "roll_database.db"
-                ).build()
+                )
+                .addMigrations(MIGRATION_1_2)
+                .build()
                 INSTANCE = instance
                 instance
             }

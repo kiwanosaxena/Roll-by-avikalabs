@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import com.avikalabs.roll.data.model.RemovedUri
 import com.avikalabs.roll.data.model.RotationConfig
 import com.avikalabs.roll.data.model.SyncedFolder
 import com.avikalabs.roll.data.model.WallpaperItem
@@ -82,4 +83,16 @@ interface RollDao {
         }
         updateItems(updated)
     }
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRemovedUri(removedUri: RemovedUri)
+
+    @Query("SELECT uri FROM removed_uris")
+    suspend fun getAllRemovedUris(): List<String>
+
+    @Query("DELETE FROM removed_uris WHERE uri = :uri")
+    suspend fun deleteRemovedUri(uri: String)
+
+    @Query("DELETE FROM removed_uris")
+    suspend fun clearRemovedUris()
 }

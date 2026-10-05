@@ -18,6 +18,7 @@ class FolderSyncWorker(
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val repository = RollRepository.getInstance(applicationContext)
         val syncedFolders = repository.getAllSyncedFoldersSync()
+        val removedUris = repository.getAllRemovedUris().toSet()
 
         for (folder in syncedFolders) {
             try {
@@ -57,7 +58,7 @@ class FolderSyncWorker(
                             val docId = c.getString(idCol)
                             val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId).toString()
 
-                            if (!existingUris.contains(docUri)) {
+                            if (!existingUris.contains(docUri) && !removedUris.contains(docUri)) {
                                 newItems.add(
                                     WallpaperItem(
                                         uri = docUri,

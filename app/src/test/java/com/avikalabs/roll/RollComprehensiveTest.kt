@@ -319,4 +319,50 @@ class RollComprehensiveTest {
         composeTestRule.onNodeWithTag("action_remove_from_roll_item_1").performClick()
         assertEquals("item_1", removedId)
     }
+
+    @Test
+    fun `test removing photo with sourceFolderUri records in removed_uris`() = runBlocking {
+        val item = WallpaperItem(
+            id = "f1",
+            uri = "content://media/folder/photo1.jpg",
+            target = WallpaperTarget.HOME,
+            sourceFolderUri = "content://media/tree/folder1"
+        )
+        repository.addItems(listOf(item))
+        repository.removeItem("f1", WallpaperTarget.HOME)
+
+        val removed = repository.getAllRemovedUris()
+        assertTrue(removed.contains("content://media/folder/photo1.jpg"))
+    }
+
+    @Test
+    fun `test removing photo without sourceFolderUri does not record in removed_uris`() = runBlocking {
+        val item = WallpaperItem(
+            id = "m1",
+            uri = "content://media/manual/photo1.jpg",
+            target = WallpaperTarget.HOME,
+            sourceFolderUri = null
+        )
+        repository.addItems(listOf(item))
+        repository.removeItem("m1", WallpaperTarget.HOME)
+
+        val removed = repository.getAllRemovedUris()
+        assertFalse(removed.contains("content://media/manual/photo1.jpg"))
+    }
+
+    @Test
+    fun `test migration 1 to 2 creates removed_uris table`() {
+        val helper = androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory()
+            .create(androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(context).name(null).callback(object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(1) {
+                override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {}
+                override fun onUpgrade(db: androidx.sqlite.db.SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+            }).build())
+        val db = helper.writableDatabase
+        RollDatabase.MIGRATION_1_2.migrate(db)
+        val cursor = db.query("SELECT name FROM sqlite_master WHERE type='table' AND name='removed_uris'")
+        assertTrue(cursor.moveToFirst())
+        assertEquals("removed_uris", cursor.getString(0))
+        cursor.close()
+        db.close()
+    }
 }

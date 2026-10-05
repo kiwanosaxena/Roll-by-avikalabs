@@ -9,6 +9,7 @@ import com.avikalabs.roll.data.local.RollPreferences
 import com.avikalabs.roll.data.local.ThemeMode
 import com.avikalabs.roll.data.model.DurationMode
 import com.avikalabs.roll.data.model.PlaybackOrder
+import com.avikalabs.roll.data.model.RemovedUri
 import com.avikalabs.roll.data.model.RotationConfig
 import com.avikalabs.roll.data.model.SyncedFolder
 import com.avikalabs.roll.data.model.WallpaperItem
@@ -88,6 +89,7 @@ class RollRepository private constructor(
 
         val existingItems = dao.getItemsByTargetSync(target)
         val existingUris = existingItems.map { it.uri }.toSet()
+        val removedUris = dao.getAllRemovedUris().toSet()
         val newItems = mutableListOf<WallpaperItem>()
         var currentSort = (existingItems.maxOfOrNull { it.sortIndex } ?: -1) + 1
 
@@ -100,7 +102,7 @@ class RollRepository private constructor(
                 if (mime != null && mime.startsWith("image/")) {
                     val docId = c.getString(idCol)
                     val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId).toString()
-                    if (!existingUris.contains(docUri)) {
+                    if (!existingUris.contains(docUri) && !removedUris.contains(docUri)) {
                         newItems.add(
                             WallpaperItem(
                                 uri = docUri,
@@ -206,9 +208,14 @@ class RollRepository private constructor(
 
     suspend fun removeItem(itemId: String, target: WallpaperTarget) = withContext(Dispatchers.IO) {
         val currentItems = dao.getItemsByTargetSync(target)
+        val removedItem = currentItems.find { it.id == itemId }
         val removedIndex = currentItems.indexOfFirst { it.id == itemId }
         val config = dao.getRotationConfigSync(target) ?: RotationConfig(target)
         val oldShowingIndex = config.currentIndex
+
+        if (removedItem != null && !removedItem.sourceFolderUri.isNullOrEmpty()) {
+            dao.insertRemovedUri(RemovedUri(removedItem.uri))
+        }
 
         dao.deleteItemById(itemId)
         val remaining = dao.getItemsByTargetSync(target)
@@ -359,6 +366,14 @@ class RollRepository private constructor(
                 next
             }
         }
+    }
+
+    suspend fun getAllRemovedUris(): List<String> = withContext(Dispatchers.IO) {
+        dao.getAllRemovedUris()
+    }
+
+    suspend fun clearRemovedUris() = withContext(Dispatchers.IO) {
+        dao.clearRemovedUris()
     }
 
     private fun getItemDuration(item: WallpaperItem, config: RotationConfig): Int {
