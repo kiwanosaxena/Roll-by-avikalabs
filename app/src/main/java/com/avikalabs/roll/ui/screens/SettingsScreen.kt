@@ -77,6 +77,7 @@ fun SettingsScreen(
     onThemeModeChanged: (ThemeMode) -> Unit,
     homeDoubleTapEnabled: Boolean,
     onHomeDoubleTapToggle: (Boolean) -> Unit,
+    onNavigatePrivacyPolicy: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -375,14 +376,7 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
                         .background(glassColors.glassBorder.copy(alpha = 0.2f))
-                        .clickable {
-                            val policyIntent = Intent(Intent.ACTION_VIEW).apply {
-                                data = Uri.parse("https://avikalabs.com/roll/privacy")
-                            }
-                            try {
-                                context.startActivity(policyIntent)
-                            } catch (_: Exception) {}
-                        }
+                        .clickable { onNavigatePrivacyPolicy() }
                         .padding(horizontal = 14.dp, vertical = 12.dp)
                         .testTag("privacy_policy_row"),
                     verticalAlignment = Alignment.CenterVertically
@@ -401,10 +395,10 @@ fun SettingsScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+                        imageVector = Icons.Outlined.ChevronRight,
                         contentDescription = null,
                         tint = glassColors.textSecondary,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

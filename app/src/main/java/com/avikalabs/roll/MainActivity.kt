@@ -71,6 +71,7 @@ import com.avikalabs.roll.ui.components.AddPhotoActionSheet
 import com.avikalabs.roll.ui.components.GlassBox
 import com.avikalabs.roll.ui.screens.DurationSetupScreen
 import com.avikalabs.roll.ui.screens.PickerScreen
+import com.avikalabs.roll.ui.screens.PrivacyPolicyScreen
 import com.avikalabs.roll.ui.screens.SettingsScreen
 import com.avikalabs.roll.ui.screens.TheRollScreen
 import com.avikalabs.roll.ui.theme.AccentSunset
@@ -109,6 +110,7 @@ object NavRoutes {
     const val DURATION_SETUP = "duration_setup/{target}"
     const val THE_ROLL = "the_roll"
     const val SETTINGS = "settings"
+    const val PRIVACY_POLICY = "privacy_policy"
 
     fun durationSetup(target: WallpaperTarget) = "duration_setup/${target.name}"
 }
@@ -147,22 +149,24 @@ fun MainAppContent(
             contentColor = glassColors.textPrimary,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                RollTopAppBar(
-                    currentRoute = currentRoute,
-                    activeTarget = uiState.activeTarget,
-                    selectedCount = if (uiState.activeTarget == WallpaperTarget.HOME) uiState.homeItems.size else uiState.lockItems.size,
-                    onNavigateBack = { navController.popBackStack() },
-                    onNavigateSettings = {
-                        if (currentRoute != NavRoutes.SETTINGS) {
-                            navController.navigate(NavRoutes.SETTINGS)
+                if (currentRoute != NavRoutes.PRIVACY_POLICY) {
+                    RollTopAppBar(
+                        currentRoute = currentRoute,
+                        activeTarget = uiState.activeTarget,
+                        selectedCount = if (uiState.activeTarget == WallpaperTarget.HOME) uiState.homeItems.size else uiState.lockItems.size,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateSettings = {
+                            if (currentRoute != NavRoutes.SETTINGS) {
+                                navController.navigate(NavRoutes.SETTINGS)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             },
             bottomBar = {
                 // Persistent navigation exposes Picker & The Roll once at least 1 photo exists (§6)
                 val hasAnyPhotos = uiState.totalItemCount > 0
-                val showBottomNav = hasAnyPhotos && currentRoute != NavRoutes.SETTINGS
+                val showBottomNav = hasAnyPhotos && currentRoute != NavRoutes.SETTINGS && currentRoute != NavRoutes.PRIVACY_POLICY
 
                 AnimatedVisibility(
                     visible = showBottomNav,
@@ -281,7 +285,15 @@ fun MainAppContent(
                         currentThemeMode = uiState.themeMode,
                         onThemeModeChanged = { viewModel.setThemeMode(it) },
                         homeDoubleTapEnabled = uiState.homeDoubleTapEnabled,
-                        onHomeDoubleTapToggle = { viewModel.setHomeDoubleTapEnabled(it) }
+                        onHomeDoubleTapToggle = { viewModel.setHomeDoubleTapEnabled(it) },
+                        onNavigatePrivacyPolicy = { navController.navigate(NavRoutes.PRIVACY_POLICY) }
+                    )
+                }
+
+                // PRIVACY POLICY SCREEN
+                composable(NavRoutes.PRIVACY_POLICY) {
+                    PrivacyPolicyScreen(
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
             }

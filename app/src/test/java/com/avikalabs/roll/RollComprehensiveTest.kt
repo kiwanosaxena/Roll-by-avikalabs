@@ -386,4 +386,36 @@ class RollComprehensiveTest {
         assertEquals(1, removedAfter.size)
         assertEquals("uri_3", removedAfter[0])
     }
+
+    @Test
+    fun `test privacy policy screen rendering and back button`() {
+        var backClicked = false
+        composeTestRule.setContent {
+            com.avikalabs.roll.ui.screens.PrivacyPolicyScreen(
+                onNavigateBack = { backClicked = true }
+            )
+        }
+        composeTestRule.onNodeWithTag("privacy_policy_screen").assertExists()
+        composeTestRule.onNodeWithTag("btn_view_online").assertExists()
+        composeTestRule.onNodeWithTag("btn_back_privacy").performClick()
+        assertTrue(backClicked)
+    }
+
+    @Test
+    fun `test settings screen privacy policy row triggers callback`() {
+        var privacyClicked = false
+        composeTestRule.setContent {
+            com.avikalabs.roll.ui.screens.SettingsScreen(
+                currentThemeMode = com.avikalabs.roll.data.local.ThemeMode.SYSTEM,
+                onThemeModeChanged = {},
+                homeDoubleTapEnabled = false,
+                onHomeDoubleTapToggle = {},
+                onNavigatePrivacyPolicy = { privacyClicked = true }
+            )
+        }
+        composeTestRule.onNodeWithTag("privacy_policy_row")
+            .performScrollTo()
+            .performClick()
+        assertTrue(privacyClicked)
+    }
 }
