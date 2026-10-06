@@ -87,12 +87,7 @@ class RollRepository private constructor(
             null
         )
 
-        val existingItems = dao.getItemsByTargetSync(target)
-        val existingUris = existingItems.map { it.uri }.toSet()
-        val removedUris = dao.getAllRemovedUris().toSet()
-        val newItems = mutableListOf<WallpaperItem>()
-        var currentSort = (existingItems.maxOfOrNull { it.sortIndex } ?: -1) + 1
-
+        val folderDocUris = mutableListOf<String>()
         cursor?.use { c ->
             val idCol = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
             val mimeCol = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
@@ -102,18 +97,37 @@ class RollRepository private constructor(
                 if (mime != null && mime.startsWith("image/")) {
                     val docId = c.getString(idCol)
                     val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId).toString()
-                    if (!existingUris.contains(docUri) && !removedUris.contains(docUri)) {
-                        newItems.add(
-                            WallpaperItem(
-                                uri = docUri,
-                                target = target,
-                                durationSeconds = 900,
-                                sourceFolderUri = treeUri.toString(),
-                                sortIndex = currentSort++
-                            )
-                        )
-                    }
+                    folderDocUris.add(docUri)
                 }
+            }
+        }
+
+        // When the user manually re-imports a folder, clear its entries from removed_uris first
+        val allRemovedUris = dao.getAllRemovedUris().toSet()
+        val toClear = folderDocUris.filter { allRemovedUris.contains(it) }
+        if (toClear.isNotEmpty()) {
+            toClear.chunked(500).forEach { chunk ->
+                dao.deleteRemovedUris(chunk)
+            }
+        }
+        val remainingRemovedUris = allRemovedUris - toClear.toSet()
+
+        val existingItems = dao.getItemsByTargetSync(target)
+        val existingUris = existingItems.map { it.uri }.toSet()
+        val newItems = mutableListOf<WallpaperItem>()
+        var currentSort = (existingItems.maxOfOrNull { it.sortIndex } ?: -1) + 1
+
+        for (docUri in folderDocUris) {
+            if (!existingUris.contains(docUri) && !remainingRemovedUris.contains(docUri)) {
+                newItems.add(
+                    WallpaperItem(
+                        uri = docUri,
+                        target = target,
+                        durationSeconds = 900,
+                        sourceFolderUri = treeUri.toString(),
+                        sortIndex = currentSort++
+                    )
+                )
             }
         }
 
@@ -370,6 +384,14 @@ class RollRepository private constructor(
 
     suspend fun getAllRemovedUris(): List<String> = withContext(Dispatchers.IO) {
         dao.getAllRemovedUris()
+    }
+
+    suspend fun deleteRemovedUris(uris: List<String>) = withContext(Dispatchers.IO) {
+        if (uris.isNotEmpty()) {
+            uris.chunked(500).forEach { chunk ->
+                dao.deleteRemovedUris(chunk)
+            }
+        }
     }
 
     suspend fun clearRemovedUris() = withContext(Dispatchers.IO) {

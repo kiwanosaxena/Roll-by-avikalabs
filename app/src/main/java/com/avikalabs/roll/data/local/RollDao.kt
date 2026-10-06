@@ -93,6 +93,9 @@ interface RollDao {
     @Query("DELETE FROM removed_uris WHERE uri = :uri")
     suspend fun deleteRemovedUri(uri: String)
 
+    @Query("DELETE FROM removed_uris WHERE uri IN (:uris)")
+    suspend fun deleteRemovedUris(uris: List<String>)
+
     @Query("DELETE FROM removed_uris")
     suspend fun clearRemovedUris()
 }

@@ -365,4 +365,25 @@ class RollComprehensiveTest {
         cursor.close()
         db.close()
     }
+
+    @Test
+    fun `test deleteRemovedUris clears specified URIs`() = runBlocking {
+        val item1 = WallpaperItem(id = "f1", uri = "uri_1", target = WallpaperTarget.HOME, sourceFolderUri = "folderA")
+        val item2 = WallpaperItem(id = "f2", uri = "uri_2", target = WallpaperTarget.HOME, sourceFolderUri = "folderA")
+        val item3 = WallpaperItem(id = "f3", uri = "uri_3", target = WallpaperTarget.HOME, sourceFolderUri = "folderB")
+        repository.addItems(listOf(item1, item2, item3))
+
+        repository.removeItem("f1", WallpaperTarget.HOME)
+        repository.removeItem("f2", WallpaperTarget.HOME)
+        repository.removeItem("f3", WallpaperTarget.HOME)
+
+        val removedBefore = repository.getAllRemovedUris()
+        assertEquals(3, removedBefore.size)
+
+        repository.deleteRemovedUris(listOf("uri_1", "uri_2"))
+
+        val removedAfter = repository.getAllRemovedUris()
+        assertEquals(1, removedAfter.size)
+        assertEquals("uri_3", removedAfter[0])
+    }
 }
