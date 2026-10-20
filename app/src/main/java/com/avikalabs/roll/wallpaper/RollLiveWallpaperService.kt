@@ -87,6 +87,7 @@ class RollLiveWallpaperService : WallpaperService() {
                     if (isPreview) return false // never advance during system live-wallpaper preview
 
                     serviceScope.launch(Dispatchers.IO) {
+                        if (!repository.isProSync()) return@launch
                         val doubleTapEnabled = repository.isHomeDoubleTapEnabledSync()
                         if (!doubleTapEnabled) return@launch
 

@@ -1,6 +1,5 @@
 package com.avikalabs.roll.ui.components
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -22,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -47,7 +47,9 @@ import com.avikalabs.roll.ui.theme.LocalGlassColors
 fun AddPhotoActionSheet(
     onDismiss: () -> Unit,
     onPhotosSelected: (List<Uri>) -> Unit,
-    onFolderSelected: (Uri, String) -> Unit
+    onFolderSelected: (Uri, String) -> Unit,
+    isPro: Boolean = false,
+    onNavigatePro: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val glassColors = LocalGlassColors.current
@@ -87,7 +89,7 @@ fun AddPhotoActionSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = if (glassColors.isDark) glassColors.glassFillElevated else glassColors.glassFillElevated,
+        containerColor = glassColors.glassFillElevated,
         contentColor = glassColors.textPrimary,
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         dragHandle = null
@@ -119,12 +121,18 @@ fun AddPhotoActionSheet(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Option 2: Choose a folder
+            // Option 2: Choose a folder (Pro only)
             ActionSheetRow(
                 title = "Choose a folder",
                 icon = Icons.Outlined.Folder,
+                showLock = !isPro,
                 onClick = {
-                    folderPickerLauncher.launch(null)
+                    if (!isPro) {
+                        onDismiss()
+                        onNavigatePro()
+                    } else {
+                        folderPickerLauncher.launch(null)
+                    }
                 },
                 testTag = "action_choose_folder"
             )
@@ -153,6 +161,7 @@ private fun ActionSheetRow(
     icon: ImageVector,
     onClick: () -> Unit,
     isCancel: Boolean = false,
+    showLock: Boolean = false,
     testTag: String = ""
 ) {
     val glassColors = LocalGlassColors.current
@@ -179,7 +188,16 @@ private fun ActionSheetRow(
             text = title,
             fontSize = 15.sp,
             fontWeight = if (isCancel) FontWeight.Normal else FontWeight.Medium,
-            color = if (isCancel) glassColors.textSecondary else glassColors.textPrimary
+            color = if (isCancel) glassColors.textSecondary else glassColors.textPrimary,
+            modifier = Modifier.weight(1f)
         )
+        if (showLock) {
+            Icon(
+                imageVector = Icons.Outlined.Lock,
+                contentDescription = "Pro feature",
+                tint = AccentSunset,
+                modifier = Modifier.size(16.dp)
+            )
+        }
     }
 }

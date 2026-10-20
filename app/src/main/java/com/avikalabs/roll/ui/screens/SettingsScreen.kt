@@ -33,14 +33,18 @@ import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PrivacyTip
+import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Wallpaper
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -78,6 +82,9 @@ fun SettingsScreen(
     homeDoubleTapEnabled: Boolean,
     onHomeDoubleTapToggle: (Boolean) -> Unit,
     onNavigatePrivacyPolicy: () -> Unit = {},
+    isPro: Boolean = false,
+    onNavigatePro: () -> Unit = {},
+    onRestorePurchases: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -103,6 +110,147 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
+        // 0. ROLL PRO SECTION
+        SectionHeader(title = "Roll Pro", icon = Icons.Outlined.Star)
+
+        GlassBox(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevated = true
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                // Pro Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onNavigatePro() }
+                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(AccentSunset.copy(alpha = 0.18f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isPro) Icons.Outlined.Check else Icons.Outlined.Star,
+                                contentDescription = null,
+                                tint = AccentSunset,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Roll Pro",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = glassColors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (isPro) stringResource(R.string.pro_unlocked_thank_you) else stringResource(R.string.pro_unlock_button_default),
+                                fontSize = 12.5.sp,
+                                color = if (isPro) AccentSunset else glassColors.textSecondary
+                            )
+                        }
+                    }
+
+                    if (!isPro) {
+                        Button(
+                            onClick = onNavigatePro,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = AccentSunset,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.testTag("btn_settings_unlock_pro")
+                        ) {
+                            Text(
+                                text = stringResource(R.string.pro_unlock_button_default),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.ChevronRight,
+                            contentDescription = null,
+                            tint = glassColors.textSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(color = glassColors.glassBorder.copy(alpha = 0.35f))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Restore Purchases Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onRestorePurchases() }
+                        .padding(vertical = 4.dp, horizontal = 4.dp)
+                        .testTag("row_restore_purchases"),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(glassColors.glassBorder.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Restore,
+                                contentDescription = null,
+                                tint = glassColors.textSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = stringResource(R.string.pro_restore_purchases),
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = glassColors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Restore previous Google Play purchases",
+                                fontSize = 12.sp,
+                                color = glassColors.textSecondary
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Outlined.ChevronRight,
+                        contentDescription = null,
+                        tint = glassColors.textSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+
         // 1. APPEARANCE SECTION (§7.6.1)
         SectionHeader(title = "Appearance", icon = Icons.Outlined.Palette)
 
@@ -237,21 +385,31 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 // Double Tap to Change Wallpaper Checkbox (§7.6.2)
-                val doubleTapEnabledState = homeDoubleTapEnabled && isLiveWallpaperActive
+                val doubleTapEnabledState = homeDoubleTapEnabled && isLiveWallpaperActive && isPro
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable(enabled = isLiveWallpaperActive) {
-                            onHomeDoubleTapToggle(!homeDoubleTapEnabled)
+                        .clickable {
+                            if (!isPro) {
+                                onNavigatePro()
+                            } else if (isLiveWallpaperActive) {
+                                onHomeDoubleTapToggle(!homeDoubleTapEnabled)
+                            }
                         }
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Checkbox(
                         checked = doubleTapEnabledState,
-                        onCheckedChange = { if (isLiveWallpaperActive) onHomeDoubleTapToggle(it) },
-                        enabled = isLiveWallpaperActive,
+                        onCheckedChange = {
+                            if (!isPro) {
+                                onNavigatePro()
+                            } else if (isLiveWallpaperActive) {
+                                onHomeDoubleTapToggle(it)
+                            }
+                        },
+                        enabled = isLiveWallpaperActive || !isPro,
                         colors = CheckboxDefaults.colors(
                             checkedColor = AccentSunset,
                             uncheckedColor = glassColors.textSecondary,
@@ -261,13 +419,24 @@ fun SettingsScreen(
                         modifier = Modifier.testTag("checkbox_double_tap")
                     )
                     Column(modifier = Modifier.padding(start = 6.dp)) {
-                        Text(
-                            text = "Double tap to change wallpaper",
-                            fontSize = 13.5.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (isLiveWallpaperActive) glassColors.textPrimary else glassColors.textSecondary.copy(alpha = 0.6f)
-                        )
-                        if (!isLiveWallpaperActive) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Double tap to change wallpaper",
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isLiveWallpaperActive || !isPro) glassColors.textPrimary else glassColors.textSecondary.copy(alpha = 0.6f)
+                            )
+                            if (!isPro) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Icon(
+                                    imageVector = Icons.Outlined.Lock,
+                                    contentDescription = "Pro feature",
+                                    tint = AccentSunset,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                        }
+                        if (isPro && !isLiveWallpaperActive) {
                             Text(
                                 text = "Set Roll as your live wallpaper first",
                                 fontSize = 11.sp,

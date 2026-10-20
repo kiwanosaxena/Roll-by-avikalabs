@@ -34,3 +34,8 @@
 -keep class com.avikalabs.roll.receiver.** { *; }
 -keep class com.avikalabs.roll.wallpaper.** { *; }
 -keep class com.avikalabs.roll.widget.** { *; }
+-keep class com.avikalabs.roll.billing.** { *; }
+
+# Google Play Billing Library
+-keep class com.android.billingclient.api.** { *; }
+-keep class com.android.vending.billing.** { *; }

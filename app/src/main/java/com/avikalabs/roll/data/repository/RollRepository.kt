@@ -30,6 +30,10 @@ class RollRepository private constructor(
 
     val themeModeFlow: Flow<ThemeMode> = preferences.themeModeFlow
     val homeDoubleTapEnabledFlow: Flow<Boolean> = preferences.homeDoubleTapEnabledFlow
+    val isProFlow: Flow<Boolean> = preferences.isProFlow
+
+    fun isProSync(): Boolean = preferences.isProSync()
+    suspend fun setIsPro(isPro: Boolean) = preferences.setIsPro(isPro)
 
     fun getItems(target: WallpaperTarget): Flow<List<WallpaperItem>> = dao.getItemsByTarget(target)
     suspend fun getItemsByTargetSync(target: WallpaperTarget): List<WallpaperItem> = dao.getItemsByTargetSync(target)
@@ -43,24 +47,38 @@ class RollRepository private constructor(
     suspend fun getAllSyncedFoldersSync(): List<SyncedFolder> = dao.getAllSyncedFoldersSync()
 
     suspend fun setThemeMode(mode: ThemeMode) = preferences.setThemeMode(mode)
-    suspend fun setHomeDoubleTapEnabled(enabled: Boolean) = preferences.setHomeDoubleTapEnabled(enabled)
+    suspend fun setHomeDoubleTapEnabled(enabled: Boolean) {
+        preferences.setHomeDoubleTapEnabled(enabled)
+    }
     suspend fun isHomeDoubleTapEnabledSync(): Boolean = preferences.isHomeDoubleTapEnabledSync()
 
     suspend fun addItems(items: List<WallpaperItem>) = withContext(Dispatchers.IO) {
         if (items.isEmpty()) return@withContext
-        val target = items.first().target
+        val isPro = isProSync()
+        val itemsToInsert = if (!isPro) {
+            val totalExisting = dao.getItemsByTargetSync(WallpaperTarget.HOME).size +
+                    dao.getItemsByTargetSync(WallpaperTarget.LOCK).size
+            val allowed = (10 - totalExisting).coerceAtLeast(0)
+            if (allowed <= 0) return@withContext
+            if (items.size > allowed) items.take(allowed) else items
+        } else {
+            items
+        }
+        if (itemsToInsert.isEmpty()) return@withContext
+
+        val target = itemsToInsert.first().target
         val existing = dao.getItemsByTargetSync(target)
-        dao.insertItems(items)
+        dao.insertItems(itemsToInsert)
 
         // Ensure rotation config exists
         ensureConfigExists(target)
 
         // If this was the first item added and no work was scheduled, apply wallpaper and schedule
-        if (existing.isEmpty() && items.isNotEmpty()) {
+        if (existing.isEmpty() && itemsToInsert.isNotEmpty()) {
             val config = dao.getRotationConfigSync(target) ?: RotationConfig(target)
             applyCurrentWallpaper(target, 0)
-            if (!(target == WallpaperTarget.LOCK && config.autoChangeOnUnlock)) {
-                val duration = getItemDuration(items.first(), config)
+            if (!(target == WallpaperTarget.LOCK && config.autoChangeOnUnlock && isPro)) {
+                val duration = getItemDuration(itemsToInsert.first(), config)
                 val nextTime = System.currentTimeMillis() + (duration * 1000L)
                 dao.updateNextScheduledAt(target, nextTime)
                 scheduler.scheduleNextRotation(target, duration)
@@ -69,6 +87,7 @@ class RollRepository private constructor(
     }
 
     suspend fun importFromFolder(target: WallpaperTarget, treeUri: Uri, folderName: String): Int = withContext(Dispatchers.IO) {
+        if (!isProSync()) return@withContext 0
         val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
             treeUri,
             DocumentsContract.getTreeDocumentId(treeUri)
@@ -250,8 +269,11 @@ class RollRepository private constructor(
 
                 val newItem = remaining[newIndex]
                 WallpaperApplier.applyWallpaper(context, newItem.uri, target)
+                if (!isProSync() && target == WallpaperTarget.HOME) {
+                    WallpaperApplier.applyWallpaper(context, newItem.uri, WallpaperTarget.LOCK)
+                }
 
-                if (target == WallpaperTarget.LOCK && config.autoChangeOnUnlock) {
+                if (target == WallpaperTarget.LOCK && config.autoChangeOnUnlock && isProSync()) {
                     dao.updateNextScheduledAt(target, null)
                 } else {
                     val duration = getItemDuration(newItem, config)
@@ -274,7 +296,15 @@ class RollRepository private constructor(
      * If false (e.g. manual skip from Widget or Live Wallpaper double-tap), maintains running schedule per PRD §7.5.
      */
     suspend fun advanceRotation(target: WallpaperTarget, isScheduledTrigger: Boolean): Boolean = withContext(Dispatchers.IO) {
-        val items = dao.getItemsByTargetSync(target)
+        val isPro = isProSync()
+        if (!isPro && target == WallpaperTarget.LOCK) {
+            scheduler.cancelRotation(WallpaperTarget.LOCK)
+            dao.updateNextScheduledAt(WallpaperTarget.LOCK, null)
+            return@withContext false
+        }
+
+        val allItems = dao.getItemsByTargetSync(target)
+        val items = if (!isPro) allItems.take(10) else allItems
         if (items.isEmpty()) {
             scheduler.cancelRotation(target)
             dao.updateNextScheduledAt(target, null)
@@ -295,6 +325,9 @@ class RollRepository private constructor(
             if (success) {
                 itemToApply = candidate
                 dao.updateCurrentIndex(target, chosenIndex)
+                if (!isPro && target == WallpaperTarget.HOME) {
+                    WallpaperApplier.applyWallpaper(context, candidate.uri, WallpaperTarget.LOCK)
+                }
                 break
             } else {
                 // Candidate photo missing or inaccessible, attempt next candidate
@@ -305,7 +338,7 @@ class RollRepository private constructor(
 
         if (success && itemToApply != null) {
             // If target is Lock with unlock trigger, don't schedule duration work
-            if (target == WallpaperTarget.LOCK && config.autoChangeOnUnlock) {
+            if (target == WallpaperTarget.LOCK && config.autoChangeOnUnlock && isPro) {
                 dao.updateNextScheduledAt(target, null)
                 return@withContext true
             }
@@ -320,7 +353,7 @@ class RollRepository private constructor(
             return@withContext true
         } else {
             // If all items failed, reschedule fallback check if scheduled
-            if (isScheduledTrigger && !(target == WallpaperTarget.LOCK && config.autoChangeOnUnlock)) {
+            if (isScheduledTrigger && !(target == WallpaperTarget.LOCK && config.autoChangeOnUnlock && isPro)) {
                 val duration = 900
                 val nextTime = System.currentTimeMillis() + (duration * 1000L)
                 dao.updateNextScheduledAt(target, nextTime)
@@ -331,32 +364,46 @@ class RollRepository private constructor(
     }
 
     suspend fun applyCurrentWallpaper(target: WallpaperTarget, index: Int): Boolean = withContext(Dispatchers.IO) {
-        val items = dao.getItemsByTargetSync(target)
+        val isPro = isProSync()
+        val effectiveTarget = if (!isPro) WallpaperTarget.HOME else target
+        val allItems = dao.getItemsByTargetSync(effectiveTarget)
+        val items = if (!isPro) allItems.take(10) else allItems
         if (items.isEmpty()) return@withContext false
         val validIndex = index.coerceIn(0, items.size - 1)
         val item = items[validIndex]
-        val success = WallpaperApplier.applyWallpaper(context, item.uri, target)
+        val success = WallpaperApplier.applyWallpaper(context, item.uri, effectiveTarget)
         if (success) {
-            dao.updateCurrentIndex(target, validIndex)
+            dao.updateCurrentIndex(effectiveTarget, validIndex)
+            if (!isPro) {
+                WallpaperApplier.applyWallpaper(context, item.uri, WallpaperTarget.LOCK)
+            }
         }
         success
     }
 
     suspend fun executeRollSetup(target: WallpaperTarget): Boolean = withContext(Dispatchers.IO) {
-        val items = dao.getItemsByTargetSync(target)
+        val isPro = isProSync()
+        val effectiveTarget = if (!isPro) WallpaperTarget.HOME else target
+        val allItems = dao.getItemsByTargetSync(effectiveTarget)
+        val items = if (!isPro) allItems.take(10) else allItems
         if (items.isEmpty()) return@withContext false
 
-        ensureConfigExists(target)
-        val config = dao.getRotationConfigSync(target) ?: RotationConfig(target)
+        ensureConfigExists(effectiveTarget)
+        val config = dao.getRotationConfigSync(effectiveTarget) ?: RotationConfig(effectiveTarget)
         val validIndex = config.currentIndex.coerceIn(0, items.size - 1)
-        val success = applyCurrentWallpaper(target, validIndex)
+        val success = applyCurrentWallpaper(effectiveTarget, validIndex)
 
-        if (!(target == WallpaperTarget.LOCK && config.autoChangeOnUnlock)) {
+        if (!isPro) {
+            scheduler.cancelRotation(WallpaperTarget.LOCK)
+            dao.updateNextScheduledAt(WallpaperTarget.LOCK, null)
+        }
+
+        if (!(effectiveTarget == WallpaperTarget.LOCK && config.autoChangeOnUnlock && isPro)) {
             val currentItem = items[validIndex]
             val duration = getItemDuration(currentItem, config)
             val nextTime = System.currentTimeMillis() + (duration * 1000L)
-            dao.updateNextScheduledAt(target, nextTime)
-            scheduler.scheduleNextRotation(target, duration)
+            dao.updateNextScheduledAt(effectiveTarget, nextTime)
+            scheduler.scheduleNextRotation(effectiveTarget, duration)
         }
         success
     }
@@ -370,7 +417,8 @@ class RollRepository private constructor(
 
     private fun computeNextIndex(currentIndex: Int, totalSize: Int, playbackOrder: PlaybackOrder): Int {
         if (totalSize <= 1) return 0
-        return when (playbackOrder) {
+        val effectiveOrder = if (isProSync()) playbackOrder else PlaybackOrder.SEQUENTIAL
+        return when (effectiveOrder) {
             PlaybackOrder.SEQUENTIAL -> (currentIndex + 1) % totalSize
             PlaybackOrder.SHUFFLE -> {
                 var next = Random.nextInt(totalSize)

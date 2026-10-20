@@ -23,6 +23,9 @@ class UnlockReceiver : BroadcastReceiver() {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val repository = RollRepository.getInstance(context)
+                    if (!repository.isProSync()) {
+                        return@launch
+                    }
                     val lockConfig = repository.getRotationConfigSync(WallpaperTarget.LOCK)
                     if (lockConfig?.autoChangeOnUnlock == true) {
                         repository.advanceRotation(WallpaperTarget.LOCK, isScheduledTrigger = false)

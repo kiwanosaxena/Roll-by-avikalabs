@@ -1,10 +1,14 @@
 package com.avikalabs.roll.ui
 
+import android.app.Activity
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.avikalabs.roll.R
+import com.avikalabs.roll.RollApplication
+import com.avikalabs.roll.billing.BillingManager
 import com.avikalabs.roll.data.local.ThemeMode
 import com.avikalabs.roll.data.model.DurationMode
 import com.avikalabs.roll.data.model.PlaybackOrder
@@ -30,12 +34,17 @@ data class RollUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val homeDoubleTapEnabled: Boolean = false,
     val totalItemCount: Int = 0,
-    val bannerMessage: String? = null
+    val bannerMessage: String? = null,
+    val isPro: Boolean = false,
+    val proPrice: String? = null,
+    val isBillingAvailable: Boolean = true,
+    val proStatusMessage: String? = null
 )
 
 class RollViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = RollRepository.getInstance(application)
+    val billingManager = (application as? RollApplication)?.billingManager ?: BillingManager.getInstance(application)
 
     private val _activeTarget = MutableStateFlow(WallpaperTarget.HOME)
     val activeTarget: StateFlow<WallpaperTarget> = _activeTarget.asStateFlow()
@@ -54,14 +63,20 @@ class RollViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     val uiState: StateFlow<RollUiState> = combine(
-        _activeTarget,
-        repository.getItems(WallpaperTarget.HOME),
-        repository.getItems(WallpaperTarget.LOCK),
-        repository.getRotationConfig(WallpaperTarget.HOME),
-        repository.getRotationConfig(WallpaperTarget.LOCK),
-        repository.themeModeFlow,
-        repository.homeDoubleTapEnabledFlow,
-        _bannerMessage
+        listOf(
+            _activeTarget,
+            repository.getItems(WallpaperTarget.HOME),
+            repository.getItems(WallpaperTarget.LOCK),
+            repository.getRotationConfig(WallpaperTarget.HOME),
+            repository.getRotationConfig(WallpaperTarget.LOCK),
+            repository.themeModeFlow,
+            repository.homeDoubleTapEnabledFlow,
+            _bannerMessage,
+            billingManager.isPro,
+            billingManager.formattedPrice,
+            billingManager.isBillingAvailable,
+            billingManager.purchaseMessage
+        )
     ) { values ->
         val target = values[0] as WallpaperTarget
         @Suppress("UNCHECKED_CAST")
@@ -73,6 +88,10 @@ class RollViewModel(application: Application) : AndroidViewModel(application) {
         val themeMode = values[5] as ThemeMode
         val doubleTap = values[6] as Boolean
         val banner = values[7] as? String
+        val isPro = values[8] as Boolean
+        val proPrice = values[9] as? String
+        val isBillingAvailable = values[10] as Boolean
+        val proStatusMessage = values[11] as? String
 
         RollUiState(
             activeTarget = target,
@@ -83,7 +102,11 @@ class RollViewModel(application: Application) : AndroidViewModel(application) {
             themeMode = themeMode,
             homeDoubleTapEnabled = doubleTap,
             totalItemCount = homeItems.size + lockItems.size,
-            bannerMessage = banner
+            bannerMessage = banner,
+            isPro = isPro,
+            proPrice = proPrice,
+            isBillingAvailable = isBillingAvailable,
+            proStatusMessage = proStatusMessage
         )
     }.stateIn(
         scope = viewModelScope,
@@ -99,9 +122,35 @@ class RollViewModel(application: Application) : AndroidViewModel(application) {
         _bannerMessage.value = null
     }
 
+    fun clearProStatusMessage() {
+        billingManager.clearPurchaseMessage()
+    }
+
+    fun launchPurchase(activity: Activity) {
+        billingManager.launchPurchase(activity)
+    }
+
+    fun restorePurchases(onResult: ((Boolean) -> Unit)? = null) {
+        billingManager.refreshPurchases { success ->
+            onResult?.invoke(success)
+        }
+    }
+
+    fun refreshPurchases() {
+        billingManager.refreshPurchases()
+    }
+
     fun addPhotos(target: WallpaperTarget, uris: List<Uri>) {
         viewModelScope.launch {
+            val isPro = uiState.value.isPro
             val existing = if (target == WallpaperTarget.HOME) uiState.value.homeItems else uiState.value.lockItems
+            val currentTotal = uiState.value.totalItemCount
+
+            if (!isPro && currentTotal >= 10) {
+                _bannerMessage.value = getApplication<Application>().getString(R.string.pro_limit_reached_message)
+                return@launch
+            }
+
             var startSortIndex = (existing.maxOfOrNull { it.sortIndex } ?: -1) + 1
 
             // Persist read permission if available

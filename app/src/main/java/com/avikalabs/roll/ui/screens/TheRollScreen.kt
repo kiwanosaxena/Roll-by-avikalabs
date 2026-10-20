@@ -30,13 +30,19 @@ import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.DragHandle
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Shuffle
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import com.avikalabs.roll.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -96,9 +102,19 @@ fun TheRollScreen(
     onRemoveItem: (String) -> Unit,
     onAddFrameClick: () -> Unit,
     onExecuteClick: () -> Unit,
+    isPro: Boolean = false,
+    onNavigatePro: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val glassColors = LocalGlassColors.current
+
+    val handleAddClick = {
+        if (!isPro && items.size >= 10) {
+            onNavigatePro()
+        } else {
+            onAddFrameClick()
+        }
+    }
 
     // Local mutable list for real-time smooth drag and drop
     var currentItems by remember(items, activeTarget) { mutableStateOf(items) }
@@ -122,15 +138,89 @@ fun TheRollScreen(
         GlassSegmentedToggle(
             selectedTarget = activeTarget,
             onTargetSelected = onTargetSelected,
+            isPro = isPro,
             modifier = Modifier.padding(bottom = 10.dp)
         )
 
-        // Playback Order Toggle (In order / Shuffle) (§7.4)
-        PlaybackOrderToggle(
-            currentOrder = config.playbackOrder,
-            onOrderSelected = onPlaybackOrderChanged,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+        if (!isPro && activeTarget == WallpaperTarget.LOCK) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                GlassBox(
+                    modifier = Modifier
+                        .fillMaxWidth(0.92f)
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    elevated = true
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(AccentSunset.copy(alpha = 0.18f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Lock,
+                                contentDescription = null,
+                                tint = AccentSunset,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.pro_lock_screen_banner),
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = glassColors.textPrimary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "In free mode, your Home roll applies to both screens. Upgrade to Roll Pro to run an independent roll with its own timer on your Lock screen.",
+                            fontSize = 13.sp,
+                            color = glassColors.textSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Button(
+                            onClick = onNavigatePro,
+                            shape = RoundedCornerShape(24.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentSunset),
+                            modifier = Modifier
+                                .height(44.dp)
+                                .testTag("btn_unlock_lock_screen_pro")
+                        ) {
+                            Text(
+                                text = stringResource(R.string.pro_btn_unlock),
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            // Playback Order Toggle (In order / Shuffle) (§7.4)
+            PlaybackOrderToggle(
+                currentOrder = config.playbackOrder,
+                onOrderSelected = onPlaybackOrderChanged,
+                isPro = isPro,
+                onNavigatePro = onNavigatePro,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
 
         // Vertical List of Roll Items
         Box(modifier = Modifier.weight(1f)) {
@@ -226,7 +316,7 @@ fun TheRollScreen(
 
                     // Dashed Add Frame to Roll Affordance at Bottom (§7.4)
                     item(key = "add_frame_bottom") {
-                        AddFrameBottomTile(onClick = onAddFrameClick)
+                        AddFrameBottomTile(onClick = handleAddClick)
                     }
                 }
             }
@@ -245,6 +335,7 @@ fun TheRollScreen(
             testTag = "btn_execute",
             modifier = Modifier.fillMaxWidth()
         )
+    }
     }
 
     if (showRollSetDialog) {
@@ -510,7 +601,9 @@ private fun AddFrameBottomTile(onClick: () -> Unit) {
 private fun PlaybackOrderToggle(
     currentOrder: PlaybackOrder,
     onOrderSelected: (PlaybackOrder) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPro: Boolean = true,
+    onNavigatePro: () -> Unit = {}
 ) {
     val glassColors = LocalGlassColors.current
 
@@ -542,7 +635,13 @@ private fun PlaybackOrderToggle(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             role = Role.Tab
-                        ) { onOrderSelected(order) }
+                        ) {
+                            if (order == PlaybackOrder.SHUFFLE && !isPro) {
+                                onNavigatePro()
+                            } else {
+                                onOrderSelected(order)
+                            }
+                        }
                         .testTag("playback_${order.name.lowercase()}"),
                     contentAlignment = Alignment.Center
                 ) {
@@ -566,6 +665,15 @@ private fun PlaybackOrderToggle(
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                         )
+                        if (order == PlaybackOrder.SHUFFLE && !isPro) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Outlined.Lock,
+                                contentDescription = "Pro feature",
+                                tint = if (isSelected) Color.White else AccentSunset,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
                     }
                 }
             }

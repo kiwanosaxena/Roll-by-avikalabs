@@ -23,6 +23,7 @@ class RollPreferences(private val context: Context) {
 
     private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
     private val KEY_HOME_DOUBLE_TAP_ENABLED = booleanPreferencesKey("home_double_tap_enabled")
+    private val KEY_IS_PRO = booleanPreferencesKey("is_pro")
 
     val themeModeFlow: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
         val raw = preferences[KEY_THEME_MODE] ?: ThemeMode.SYSTEM.name
@@ -37,6 +38,10 @@ class RollPreferences(private val context: Context) {
         preferences[KEY_HOME_DOUBLE_TAP_ENABLED] ?: false
     }
 
+    val isProFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_IS_PRO] ?: false
+    }
+
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->
             preferences[KEY_THEME_MODE] = mode.name
@@ -46,6 +51,22 @@ class RollPreferences(private val context: Context) {
     suspend fun setHomeDoubleTapEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[KEY_HOME_DOUBLE_TAP_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setIsPro(isPro: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_IS_PRO] = isPro
+        }
+    }
+
+    fun isProSync(): Boolean {
+        return try {
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                context.dataStore.data.first()[KEY_IS_PRO] ?: false
+            }
+        } catch (_: Exception) {
+            false
         }
     }
 

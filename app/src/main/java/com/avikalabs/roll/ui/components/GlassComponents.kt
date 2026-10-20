@@ -15,6 +15,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -63,7 +68,8 @@ fun GlassBox(
 fun GlassSegmentedToggle(
     selectedTarget: WallpaperTarget,
     onTargetSelected: (WallpaperTarget) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isPro: Boolean = true
 ) {
     val glassColors = LocalGlassColors.current
 
@@ -111,12 +117,26 @@ fun GlassSegmentedToggle(
                         .testTag("toggle_${target.name.lowercase()}"),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = label,
-                        color = animatedTextColor,
-                        fontSize = 13.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = label,
+                            color = animatedTextColor,
+                            fontSize = 13.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                        if (target == WallpaperTarget.LOCK && !isPro) {
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Icon(
+                                imageVector = Icons.Outlined.Lock,
+                                contentDescription = "Pro feature",
+                                tint = if (isSelected) Color.White else AccentSunset,
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

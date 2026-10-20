@@ -76,32 +76,58 @@ import com.avikalabs.roll.ui.screens.SettingsScreen
 import com.avikalabs.roll.ui.screens.TheRollScreen
 import com.avikalabs.roll.ui.theme.AccentSunset
 import com.avikalabs.roll.ui.theme.LocalGlassColors
+import android.app.Activity
+import android.content.Intent
 import com.avikalabs.roll.ui.theme.RollTheme
+import com.avikalabs.roll.ui.screens.RollProScreen
 import com.avikalabs.roll.wallpaper.WallpaperApplier
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: RollViewModel by viewModels()
+    private val navigateToRoute = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        handleIntent(intent)
 
         setContent {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            val targetRoute by navigateToRoute
 
             RollTheme(themeMode = uiState.themeMode) {
                 MainAppContent(
                     uiState = uiState,
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    initialRoute = targetRoute,
+                    onRouteHandled = { navigateToRoute.value = null }
                 )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val dest = intent?.getStringExtra(EXTRA_NAVIGATE_TO)
+        if (dest != null) {
+            navigateToRoute.value = dest
         }
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.refreshLiveWallpaperState()
+        viewModel.refreshPurchases()
+    }
+
+    companion object {
+        const val EXTRA_NAVIGATE_TO = "extra_navigate_to"
     }
 }
 
@@ -111,6 +137,7 @@ object NavRoutes {
     const val THE_ROLL = "the_roll"
     const val SETTINGS = "settings"
     const val PRIVACY_POLICY = "privacy_policy"
+    const val PRO = "pro"
 
     fun durationSetup(target: WallpaperTarget) = "duration_setup/${target.name}"
 }
@@ -118,7 +145,9 @@ object NavRoutes {
 @Composable
 fun MainAppContent(
     uiState: RollUiState,
-    viewModel: RollViewModel
+    viewModel: RollViewModel,
+    initialRoute: String? = null,
+    onRouteHandled: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -130,11 +159,27 @@ fun MainAppContent(
     val snackbarHostState = remember { SnackbarHostState() }
     var showActionSheet by remember { mutableStateOf(false) }
 
+    // Handle navigation intent (e.g. from Widget or Pro shortcuts)
+    LaunchedEffect(initialRoute) {
+        if (!initialRoute.isNullOrEmpty()) {
+            navController.navigate(initialRoute)
+            onRouteHandled()
+        }
+    }
+
     // Show banner message if set
     LaunchedEffect(uiState.bannerMessage) {
         uiState.bannerMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearBanner()
+        }
+    }
+
+    // Show Pro status message if set (e.g. Welcome to Roll Pro!)
+    LaunchedEffect(uiState.proStatusMessage) {
+        uiState.proStatusMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearProStatusMessage()
         }
     }
 
@@ -149,7 +194,7 @@ fun MainAppContent(
             contentColor = glassColors.textPrimary,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                if (currentRoute != NavRoutes.PRIVACY_POLICY) {
+                if (currentRoute != NavRoutes.PRIVACY_POLICY && currentRoute != NavRoutes.PRO) {
                     RollTopAppBar(
                         currentRoute = currentRoute,
                         activeTarget = uiState.activeTarget,
@@ -166,7 +211,10 @@ fun MainAppContent(
             bottomBar = {
                 // Persistent navigation exposes Picker & The Roll once at least 1 photo exists (§6)
                 val hasAnyPhotos = uiState.totalItemCount > 0
-                val showBottomNav = hasAnyPhotos && currentRoute != NavRoutes.SETTINGS && currentRoute != NavRoutes.PRIVACY_POLICY
+                val showBottomNav = hasAnyPhotos &&
+                        currentRoute != NavRoutes.SETTINGS &&
+                        currentRoute != NavRoutes.PRIVACY_POLICY &&
+                        currentRoute != NavRoutes.PRO
 
                 AnimatedVisibility(
                     visible = showBottomNav,
@@ -235,7 +283,9 @@ fun MainAppContent(
                             } else {
                                 navController.navigate(NavRoutes.durationSetup(uiState.activeTarget))
                             }
-                        }
+                        },
+                        isPro = uiState.isPro,
+                        onNavigatePro = { navController.navigate(NavRoutes.PRO) }
                     )
                 }
 
@@ -275,7 +325,9 @@ fun MainAppContent(
                         onReorderItems = { viewModel.reorderItems(uiState.activeTarget, it) },
                         onRemoveItem = { viewModel.removeItem(it, uiState.activeTarget) },
                         onAddFrameClick = { showActionSheet = true },
-                        onExecuteClick = { viewModel.executeRollSetup(uiState.activeTarget) }
+                        onExecuteClick = { viewModel.executeRollSetup(uiState.activeTarget) },
+                        isPro = uiState.isPro,
+                        onNavigatePro = { navController.navigate(NavRoutes.PRO) }
                     )
                 }
 
@@ -286,7 +338,10 @@ fun MainAppContent(
                         onThemeModeChanged = { viewModel.setThemeMode(it) },
                         homeDoubleTapEnabled = uiState.homeDoubleTapEnabled,
                         onHomeDoubleTapToggle = { viewModel.setHomeDoubleTapEnabled(it) },
-                        onNavigatePrivacyPolicy = { navController.navigate(NavRoutes.PRIVACY_POLICY) }
+                        onNavigatePrivacyPolicy = { navController.navigate(NavRoutes.PRIVACY_POLICY) },
+                        isPro = uiState.isPro,
+                        onNavigatePro = { navController.navigate(NavRoutes.PRO) },
+                        onRestorePurchases = { viewModel.restorePurchases() }
                     )
                 }
 
@@ -294,6 +349,27 @@ fun MainAppContent(
                 composable(NavRoutes.PRIVACY_POLICY) {
                     PrivacyPolicyScreen(
                         onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                // ROLL PRO SCREEN
+                composable(NavRoutes.PRO) {
+                    RollProScreen(
+                        isPro = uiState.isPro,
+                        formattedPrice = uiState.proPrice,
+                        isBillingAvailable = uiState.isBillingAvailable,
+                        statusMessage = uiState.proStatusMessage,
+                        onUnlockClick = {
+                            (context as? Activity)?.let { activity ->
+                                viewModel.launchPurchase(activity)
+                            }
+                        },
+                        onRestorePurchasesClick = {
+                            viewModel.restorePurchases()
+                        },
+                        onCloseClick = {
+                            navController.popBackStack()
+                        }
                     )
                 }
             }
@@ -304,10 +380,20 @@ fun MainAppContent(
             AddPhotoActionSheet(
                 onDismiss = { showActionSheet = false },
                 onPhotosSelected = { uris ->
+                    val isPro = uiState.isPro
+                    val currentCount = uiState.totalItemCount
                     viewModel.addPhotos(uiState.activeTarget, uris)
+                    if (!isPro && currentCount + uris.size > 10) {
+                        navController.navigate(NavRoutes.PRO)
+                    }
                 },
                 onFolderSelected = { uri, name ->
                     viewModel.importFolder(uiState.activeTarget, uri, name)
+                },
+                isPro = uiState.isPro,
+                onNavigatePro = {
+                    showActionSheet = false
+                    navController.navigate(NavRoutes.PRO)
                 }
             )
         }

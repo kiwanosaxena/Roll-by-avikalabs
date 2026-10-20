@@ -17,6 +17,9 @@ class FolderSyncWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val repository = RollRepository.getInstance(applicationContext)
+        if (!repository.isProSync()) {
+            return@withContext Result.success()
+        }
         val syncedFolders = repository.getAllSyncedFoldersSync()
         val removedUris = repository.getAllRemovedUris().toSet()
 
