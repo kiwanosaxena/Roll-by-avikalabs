@@ -18,13 +18,7 @@ class RollWidgetActionReceiver : BroadcastReceiver() {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val repository = RollRepository.getInstance(context)
-                    if (!repository.isProSync()) {
-                        val proIntent = Intent(context, MainActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            putExtra(MainActivity.EXTRA_NAVIGATE_TO, "pro")
-                        }
-                        context.startActivity(proIntent)
-                    } else {
+                    if (repository.isProSync()) {
                         // Advance HOME wallpaper only, without resetting running timer schedule per PRD §7.5
                         repository.advanceRotation(WallpaperTarget.HOME, isScheduledTrigger = false)
                     }

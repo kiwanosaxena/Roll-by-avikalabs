@@ -131,7 +131,7 @@ class RollViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun restorePurchases(onResult: ((Boolean) -> Unit)? = null) {
-        billingManager.refreshPurchases { success ->
+        billingManager.restorePurchases { success ->
             onResult?.invoke(success)
         }
     }

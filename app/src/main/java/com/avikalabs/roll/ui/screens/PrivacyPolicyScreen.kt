@@ -43,19 +43,35 @@ private const val ONLINE_PRIVACY_URL = "https://kiwanosaxena.github.io/Roll-by-a
 
 private val KNOWN_HEADINGS = setOf(
     "Privacy Policy for Roll",
+    "# Privacy Policy for Roll",
     "The short version",
+    "## The short version",
     "Information we collect",
+    "## Information we collect",
     "Your photos and folders",
+    "## Your photos and folders",
+    "Roll Pro purchases",
+    "## Roll Pro purchases",
     "Information stored on your device",
+    "## Information stored on your device",
     "Device backups",
+    "## Device backups",
     "Permissions Roll uses",
+    "## Permissions Roll uses",
     "Third-party services",
+    "## Third-party services",
     "Children’s privacy",
     "Children's privacy",
     "Children\'s privacy",
+    "## Children’s privacy",
+    "## Children's privacy",
+    "## Children\'s privacy",
     "Security",
+    "## Security",
     "Changes to this policy",
-    "Contact us"
+    "## Changes to this policy",
+    "Contact us",
+    "## Contact us"
 )
 
 @Composable

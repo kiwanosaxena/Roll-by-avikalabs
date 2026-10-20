@@ -14,6 +14,7 @@ import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
+import com.avikalabs.roll.R
 import com.avikalabs.roll.data.local.RollPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ interface IBillingManager {
     val purchaseMessage: StateFlow<String?>
     fun launchPurchase(activity: Activity)
     fun refreshPurchases(onComplete: ((Boolean) -> Unit)? = null)
+    fun restorePurchases(onComplete: ((Boolean) -> Unit)? = null)
     fun clearPurchaseMessage()
     fun isProSync(): Boolean
 }
@@ -53,6 +55,9 @@ class BillingManager(
     override val purchaseMessage: StateFlow<String?> = _purchaseMessage.asStateFlow()
 
     private var productDetails: ProductDetails? = null
+
+    // Track previous pending state to only notify when state newly transitions to PENDING
+    private var wasPending: Boolean = false
 
     private val billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
@@ -116,7 +121,7 @@ class BillingManager(
         val details = productDetails
         if (details == null) {
             queryProductDetails()
-            _purchaseMessage.value = "Google Play isn't available right now"
+            _purchaseMessage.value = context.getString(R.string.pro_billing_unavailable)
             return
         }
 
@@ -129,10 +134,20 @@ class BillingManager(
             .build()
 
         val result = billingClient.launchBillingFlow(activity, billingFlowParams)
-        if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-            Log.w(TAG, "launchBillingFlow error: ${result.debugMessage}")
-            if (result.responseCode == BillingClient.BillingResponseCode.BILLING_UNAVAILABLE) {
+        when (result.responseCode) {
+            BillingClient.BillingResponseCode.OK -> {
+                // Flow launched successfully
+            }
+            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
+                Log.i(TAG, "launchBillingFlow returned ITEM_ALREADY_OWNED -> refreshing purchases")
+                refreshPurchases()
+            }
+            BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> {
                 _isBillingAvailable.value = false
+                _purchaseMessage.value = context.getString(R.string.pro_billing_unavailable)
+            }
+            else -> {
+                Log.w(TAG, "launchBillingFlow error: ${result.debugMessage}")
             }
         }
     }
@@ -141,10 +156,14 @@ class BillingManager(
         when (billingResult.responseCode) {
             BillingClient.BillingResponseCode.OK -> {
                 if (!purchases.isNullOrEmpty()) {
-                    handlePurchases(purchases)
+                    handlePurchases(purchases, isNewPurchase = true)
                 } else {
                     refreshPurchases()
                 }
+            }
+            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
+                Log.i(TAG, "onPurchasesUpdated returned ITEM_ALREADY_OWNED -> refreshing purchases")
+                refreshPurchases()
             }
             BillingClient.BillingResponseCode.USER_CANCELED -> {
                 Log.d(TAG, "User canceled purchase")
@@ -155,7 +174,37 @@ class BillingManager(
         }
     }
 
+    /**
+     * Automatic refresh on app start, onResume, and after purchase flows.
+     * Silent by default: does NOT show "Welcome to Roll Pro!" on silent refresh.
+     * Only shows pending message if state transitions to PENDING.
+     */
     override fun refreshPurchases(onComplete: ((Boolean) -> Unit)?) {
+        queryPurchasesInternal(
+            showWelcomeOnSuccess = false,
+            showRestoreResult = false,
+            onComplete = onComplete
+        )
+    }
+
+    /**
+     * Explicit restore initiated by the user (Settings / Pro screen).
+     * Shows R.string.pro_restore_success when Pro is found,
+     * or R.string.pro_restore_no_purchases when Pro is not found.
+     */
+    override fun restorePurchases(onComplete: ((Boolean) -> Unit)?) {
+        queryPurchasesInternal(
+            showWelcomeOnSuccess = true,
+            showRestoreResult = true,
+            onComplete = onComplete
+        )
+    }
+
+    private fun queryPurchasesInternal(
+        showWelcomeOnSuccess: Boolean,
+        showRestoreResult: Boolean,
+        onComplete: ((Boolean) -> Unit)?
+    ) {
         val params = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
@@ -170,57 +219,86 @@ class BillingManager(
                 if (proPurchase != null) {
                     when (proPurchase.purchaseState) {
                         Purchase.PurchaseState.PURCHASED -> {
+                            wasPending = false
                             if (!proPurchase.isAcknowledged) {
                                 acknowledge(proPurchase)
                             }
                             updateProStatus(true)
-                            _purchaseMessage.value = "Welcome to Roll Pro!"
+                            if (showRestoreResult) {
+                                _purchaseMessage.value = context.getString(R.string.pro_restore_success)
+                            } else if (showWelcomeOnSuccess) {
+                                _purchaseMessage.value = context.getString(R.string.pro_welcome)
+                            }
                             onComplete?.invoke(true)
                         }
                         Purchase.PurchaseState.PENDING -> {
                             updateProStatus(false)
-                            _purchaseMessage.value = "Payment pending – Pro unlocks automatically when it completes."
+                            if (!wasPending) {
+                                wasPending = true
+                                _purchaseMessage.value = context.getString(R.string.pro_payment_pending)
+                            }
+                            if (showRestoreResult) {
+                                _purchaseMessage.value = context.getString(R.string.pro_restore_no_purchases)
+                            }
                             onComplete?.invoke(false)
                         }
                         else -> {
+                            wasPending = false
                             updateProStatus(false)
+                            if (showRestoreResult) {
+                                _purchaseMessage.value = context.getString(R.string.pro_restore_no_purchases)
+                            }
                             onComplete?.invoke(false)
                         }
                     }
                 } else {
-                    // roll_pro not found -> isPro = false (handles refunds)
+                    // roll_pro not found -> isPro = false (handles refunds or free user)
+                    wasPending = false
                     updateProStatus(false)
+                    if (showRestoreResult) {
+                        _purchaseMessage.value = context.getString(R.string.pro_restore_no_purchases)
+                    }
                     onComplete?.invoke(false)
                 }
             } else {
                 Log.w(TAG, "queryPurchasesAsync failed: ${billingResult.debugMessage}")
-                // Keep the last saved value, don't crash
                 _isBillingAvailable.value = false
+                if (showRestoreResult) {
+                    _purchaseMessage.value = context.getString(R.string.pro_restore_no_purchases)
+                }
                 onComplete?.invoke(_isPro.value)
             }
         }
     }
 
-    private fun handlePurchases(purchases: List<Purchase>) {
+    private fun handlePurchases(purchases: List<Purchase>, isNewPurchase: Boolean) {
         val proPurchase = purchases.firstOrNull { it.products.contains(PRODUCT_ID_PRO) }
         if (proPurchase != null) {
             when (proPurchase.purchaseState) {
                 Purchase.PurchaseState.PURCHASED -> {
+                    wasPending = false
                     if (!proPurchase.isAcknowledged) {
                         acknowledge(proPurchase)
                     }
                     updateProStatus(true)
-                    _purchaseMessage.value = "Welcome to Roll Pro!"
+                    if (isNewPurchase) {
+                        _purchaseMessage.value = context.getString(R.string.pro_welcome)
+                    }
                 }
                 Purchase.PurchaseState.PENDING -> {
                     updateProStatus(false)
-                    _purchaseMessage.value = "Payment pending – Pro unlocks automatically when it completes."
+                    if (!wasPending) {
+                        wasPending = true
+                        _purchaseMessage.value = context.getString(R.string.pro_payment_pending)
+                    }
                 }
                 else -> {
+                    wasPending = false
                     updateProStatus(false)
                 }
             }
         } else {
+            wasPending = false
             updateProStatus(false)
         }
     }

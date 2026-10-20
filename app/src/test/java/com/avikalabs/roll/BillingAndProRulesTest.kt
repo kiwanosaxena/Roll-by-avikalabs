@@ -40,16 +40,42 @@ class FakeBillingManager(initialPro: Boolean = false) : IBillingManager {
     private val _purchaseMessage = MutableStateFlow<String?>(null)
     override val purchaseMessage: StateFlow<String?> = _purchaseMessage
 
+    var ownedOnDevice: Boolean = initialPro
+
     fun setPro(value: Boolean) {
         _isPro.value = value
+        ownedOnDevice = value
     }
 
     override fun launchPurchase(activity: Activity) {
+        if (ownedOnDevice) {
+            // ITEM_ALREADY_OWNED scenario: triggers refreshPurchases()
+            refreshPurchases()
+            return
+        }
         _isPro.value = true
+        ownedOnDevice = true
         _purchaseMessage.value = "Welcome to Roll Pro!"
     }
 
+    /**
+     * Silent refresh: never shows welcome message on refresh.
+     */
     override fun refreshPurchases(onComplete: ((Boolean) -> Unit)?) {
+        _isPro.value = ownedOnDevice
+        onComplete?.invoke(_isPro.value)
+    }
+
+    /**
+     * Restore purchases: sets success message if owned, or no purchases message if not.
+     */
+    override fun restorePurchases(onComplete: ((Boolean) -> Unit)?) {
+        _isPro.value = ownedOnDevice
+        if (ownedOnDevice) {
+            _purchaseMessage.value = "Purchases restored successfully"
+        } else {
+            _purchaseMessage.value = "No purchases found to restore"
+        }
         onComplete?.invoke(_isPro.value)
     }
 
@@ -271,5 +297,61 @@ class BillingAndProRulesTest {
         val homeConfig = repository.getRotationConfigSync(WallpaperTarget.HOME)
         // With items.take(10), after index 9 it wraps back to 0 ((9 + 1) % 10 = 0) instead of index 10
         assertEquals(0, homeConfig?.currentIndex)
+    }
+
+    @Test
+    fun `test welcome message is not shown on silent refresh`() = runBlocking {
+        val fakeBilling = FakeBillingManager(initialPro = true)
+        assertTrue(fakeBilling.isProSync())
+
+        // Ensure no initial message
+        fakeBilling.clearPurchaseMessage()
+        assertEquals(null, fakeBilling.purchaseMessage.value)
+
+        // Silent refresh on app start or onResume
+        fakeBilling.refreshPurchases()
+
+        // Pro is still unlocked, but welcome message must NOT be set
+        assertTrue(fakeBilling.isProSync())
+        assertEquals(null, fakeBilling.purchaseMessage.value)
+    }
+
+    @Test
+    fun `test ITEM_ALREADY_OWNED triggers purchase refresh and unlocks Pro`() = runBlocking {
+        val fakeBilling = FakeBillingManager(initialPro = false)
+        assertFalse(fakeBilling.isProSync())
+
+        // Simulate external state where Google Play already owns the item
+        fakeBilling.ownedOnDevice = true
+
+        // User attempts to purchase, Google Play returns ITEM_ALREADY_OWNED
+        // fakeBilling.launchPurchase routes to refreshPurchases()
+        fakeBilling.launchPurchase(Activity())
+
+        // Pro must be unlocked now
+        assertTrue(fakeBilling.isProSync())
+    }
+
+    @Test
+    fun `test restore purchases shows success when Pro is found`() = runBlocking {
+        val fakeBilling = FakeBillingManager(initialPro = false)
+        // User previously purchased Pro with their Google account
+        fakeBilling.ownedOnDevice = true
+
+        fakeBilling.restorePurchases()
+
+        assertTrue(fakeBilling.isProSync())
+        assertEquals("Purchases restored successfully", fakeBilling.purchaseMessage.value)
+    }
+
+    @Test
+    fun `test restore purchases shows no purchases found when not owned`() = runBlocking {
+        val fakeBilling = FakeBillingManager(initialPro = false)
+        fakeBilling.ownedOnDevice = false
+
+        fakeBilling.restorePurchases()
+
+        assertFalse(fakeBilling.isProSync())
+        assertEquals("No purchases found to restore", fakeBilling.purchaseMessage.value)
     }
 }

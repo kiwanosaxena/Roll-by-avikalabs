@@ -58,6 +58,10 @@ class RollPreferences(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[KEY_IS_PRO] = isPro
         }
+        try {
+            com.avikalabs.roll.widget.RollWidgetProvider.refreshAllWidgets(context, isPro)
+        } catch (_: Exception) {
+        }
     }
 
     fun isProSync(): Boolean {
