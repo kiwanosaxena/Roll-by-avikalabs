@@ -41,7 +41,8 @@ data class RollUiState(
     val isBillingAvailable: Boolean = true,
     val proStatusMessage: String? = null,
     val finishedTipSets: Set<String> = emptySet(),
-    val tutorialsDisabled: Boolean = false
+    val tutorialsDisabled: Boolean = false,
+    val tutorialDataLoaded: Boolean = false
 )
 
 class RollViewModel @JvmOverloads constructor(
@@ -121,7 +122,8 @@ class RollViewModel @JvmOverloads constructor(
             isBillingAvailable = isBillingAvailable,
             proStatusMessage = proStatusMessage,
             finishedTipSets = finishedTipSets,
-            tutorialsDisabled = tutorialsDisabled
+            tutorialsDisabled = tutorialsDisabled,
+            tutorialDataLoaded = true
         )
     }.stateIn(
         scope = viewModelScope,

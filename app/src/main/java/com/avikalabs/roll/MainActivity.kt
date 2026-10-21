@@ -79,6 +79,7 @@ import com.avikalabs.roll.ui.theme.LocalGlassColors
 import android.app.Activity
 import android.content.Intent
 import com.avikalabs.roll.ui.theme.RollTheme
+import com.avikalabs.roll.ui.screens.LicensesScreen
 import com.avikalabs.roll.ui.screens.RollProScreen
 import com.avikalabs.roll.wallpaper.WallpaperApplier
 
@@ -153,6 +154,7 @@ object NavRoutes {
     const val SETTINGS = "settings"
     const val PRIVACY_POLICY = "privacy_policy"
     const val PRO = "pro"
+    const val LICENSES = "licenses"
 
     fun durationSetup(target: WallpaperTarget) = "duration_setup/${target.name}"
 }
@@ -204,11 +206,13 @@ fun MainAppContent(
     val isBlockedScreen = showActionSheet ||
             tutorialState.isDialogActive ||
             currentRoute == NavRoutes.PRO ||
-            currentRoute == NavRoutes.PRIVACY_POLICY
+            currentRoute == NavRoutes.PRIVACY_POLICY ||
+            currentRoute == NavRoutes.LICENSES
 
     LaunchedEffect(
         currentRoute,
         isBlockedScreen,
+        uiState.tutorialDataLoaded,
         uiState.tutorialsDisabled,
         uiState.finishedTipSets,
         uiState.activeTarget,
@@ -218,10 +222,41 @@ fun MainAppContent(
         uiState.isPro,
         isLiveWallpaperActive
     ) {
-        if (uiState.tutorialsDisabled || isBlockedScreen) {
-            if (tutorialState.currentTipSet != null && (currentRoute == NavRoutes.PRO || currentRoute == NavRoutes.PRIVACY_POLICY)) {
+        // When the route changes, dismiss any tip set that belongs to a different screen (without marking it finished).
+        val activeTipSetId = tutorialState.currentTipSet?.id
+        if (activeTipSetId != null) {
+            val belongsToCurrentScreen = when (activeTipSetId) {
+                "picker_empty", "picker_photos", "picker_lock_free", "picker_lock_pro" -> currentRoute == NavRoutes.PICKER
+                "duration" -> currentRoute?.startsWith("duration_setup") == true
+                "roll" -> currentRoute == NavRoutes.THE_ROLL
+                "settings" -> currentRoute == NavRoutes.SETTINGS
+                else -> false
+            }
+            if (!belongsToCurrentScreen) {
                 tutorialState.dismiss()
             }
+        }
+
+        // If tutorialState.currentTipSet is not null and its id is in finishedTipSets, or tutorials are disabled, call tutorialState.dismiss().
+        val currentSet = tutorialState.currentTipSet
+        if (currentSet != null && (uiState.finishedTipSets.contains(currentSet.id) || uiState.tutorialsDisabled)) {
+            tutorialState.dismiss()
+        }
+
+        // Don't start any tip set until tutorialDataLoaded is true
+        if (!uiState.tutorialDataLoaded) {
+            return@LaunchedEffect
+        }
+
+        if (uiState.tutorialsDisabled || isBlockedScreen) {
+            if (tutorialState.currentTipSet != null && (currentRoute == NavRoutes.PRO || currentRoute == NavRoutes.PRIVACY_POLICY || isBlockedScreen)) {
+                tutorialState.dismiss()
+            }
+            return@LaunchedEffect
+        }
+
+        // Only assign a new tip set when tutorialState.currentTipSet is null, so an active tip set isn't restarted when other state changes.
+        if (tutorialState.currentTipSet != null) {
             return@LaunchedEffect
         }
 
@@ -598,10 +633,18 @@ fun MainAppContent(
                         homeDoubleTapEnabled = uiState.homeDoubleTapEnabled,
                         onHomeDoubleTapToggle = { viewModel.setHomeDoubleTapEnabled(it) },
                         onNavigatePrivacyPolicy = { navController.navigate(NavRoutes.PRIVACY_POLICY) },
+                        onNavigateLicenses = { navController.navigate(NavRoutes.LICENSES) },
                         isPro = uiState.isPro,
                         onNavigatePro = { navController.navigate(NavRoutes.PRO) },
                         onRestorePurchases = { viewModel.restorePurchases() },
                         onResetTutorials = { viewModel.resetTutorials() }
+                    )
+                }
+
+                // LICENSES SCREEN
+                composable(NavRoutes.LICENSES) {
+                    LicensesScreen(
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
 

@@ -11,6 +11,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.avikalabs.roll.data.local.RollDatabase
 import com.avikalabs.roll.data.local.RollPreferences
+import com.avikalabs.roll.data.model.WallpaperItem
 import com.avikalabs.roll.data.model.WallpaperTarget
 import com.avikalabs.roll.data.repository.RollRepository
 import com.avikalabs.roll.MainAppContent
@@ -265,6 +266,59 @@ class TutorialTest {
             composeTestRule.waitForIdle()
             assertEquals("picker_lock_pro", proTutorialState.currentTipSet?.id)
             composeTestRule.onNodeWithTag("coach_mark_overlay").assertExists()
+        }
+    }
+
+    @Test
+    fun `cold start with existing photos and finished tip sets never shows tutorial overlay`() {
+        runBlocking {
+            // finished_tip_sets already contains "picker_empty" and "picker_photos" in DataStore
+            preferences.markTipSetFinished("picker_empty")
+            preferences.markTipSetFinished("picker_photos")
+
+            // and photos exist in the database
+            val item1 = WallpaperItem(
+                id = "cold_start_item_1",
+                uri = "content://media/cold1",
+                target = WallpaperTarget.HOME,
+                durationSeconds = 60,
+                sortIndex = 0
+            )
+            val dao = RollDatabase.getInstance(context).rollDao()
+            dao.insertItem(item1)
+
+            // Create a fresh ViewModel and activity
+            val scenario = ActivityScenario.launch(MainActivity::class.java)
+
+            scenario.onActivity {
+                val finished = preferences.getFinishedTipSetsSync()
+                assertTrue(finished.contains("picker_empty"))
+                assertTrue(finished.contains("picker_photos"))
+            }
+
+            val fakeBilling = FakeBillingManager(initialPro = false)
+            val freshViewModel = RollViewModel(app, fakeBilling)
+            val tutorialState = TutorialState()
+            TutorialTargetRegistrar.state = tutorialState
+
+            composeTestRule.setContent {
+                val uiState by freshViewModel.uiState.collectAsState()
+                CompositionLocalProvider(LocalTutorialState provides tutorialState) {
+                    RollTheme {
+                        MainAppContent(
+                            uiState = uiState,
+                            viewModel = freshViewModel,
+                            tutorialState = tutorialState
+                        )
+                    }
+                }
+            }
+
+            composeTestRule.waitForIdle()
+            // verify no tutorial overlay ever appears
+            assertNull(tutorialState.currentTipSet)
+            composeTestRule.onNodeWithTag("coach_mark_overlay").assertDoesNotExist()
+            scenario.close()
         }
     }
 }

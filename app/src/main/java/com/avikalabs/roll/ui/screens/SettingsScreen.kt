@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Palette
@@ -83,6 +84,7 @@ fun SettingsScreen(
     homeDoubleTapEnabled: Boolean,
     onHomeDoubleTapToggle: (Boolean) -> Unit,
     onNavigatePrivacyPolicy: () -> Unit = {},
+    onNavigateLicenses: () -> Unit = {},
     isPro: Boolean = false,
     onNavigatePro: () -> Unit = {},
     onRestorePurchases: () -> Unit = {},
@@ -628,6 +630,40 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Privacy Policy",
+                        fontSize = 13.5.sp,
+                        color = glassColors.textPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(
+                        imageVector = Icons.Outlined.ChevronRight,
+                        contentDescription = null,
+                        tint = glassColors.textSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Licences Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(glassColors.glassBorder.copy(alpha = 0.2f))
+                        .clickable { onNavigateLicenses() }
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .testTag("licenses_row"),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Description,
+                        contentDescription = null,
+                        tint = AccentSunset,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Licences",
                         fontSize = 13.5.sp,
                         color = glassColors.textPrimary,
                         modifier = Modifier.weight(1f)

@@ -1,6 +1,7 @@
 package com.avikalabs.roll.ui.tutorial
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -8,6 +9,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -91,21 +93,40 @@ val LocalTutorialState: ProvidableCompositionLocal<TutorialState> = compositionL
     TutorialState()
 }
 
-fun Modifier.tutorialTarget(vararg ids: String): Modifier = this.then(
+fun Modifier.tutorialTarget(vararg ids: String): Modifier = this.composed {
+    val tutorialState = LocalTutorialState.current
+    DisposableEffect(ids) {
+        onDispose {
+            for (id in ids) {
+                tutorialState.unregisterTarget(id)
+                TutorialTargetRegistrar.unregister(id)
+            }
+        }
+    }
     Modifier.onGloballyPositioned { coordinates ->
         if (coordinates.isAttached) {
             val bounds = coordinates.boundsInRoot()
             for (id in ids) {
+                tutorialState.registerTarget(id, bounds)
                 TutorialTargetRegistrar.register(id, bounds)
+            }
+        } else {
+            for (id in ids) {
+                tutorialState.unregisterTarget(id)
+                TutorialTargetRegistrar.unregister(id)
             }
         }
     }
-)
+}
 
 object TutorialTargetRegistrar {
     var state: TutorialState? = null
 
     fun register(id: String, bounds: Rect) {
         state?.registerTarget(id, bounds)
+    }
+
+    fun unregister(id: String) {
+        state?.unregisterTarget(id)
     }
 }
