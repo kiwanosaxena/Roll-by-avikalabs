@@ -39,40 +39,13 @@ import com.avikalabs.roll.ui.components.GlassBox
 import com.avikalabs.roll.ui.theme.AccentSunset
 import com.avikalabs.roll.ui.theme.LocalGlassColors
 
-private const val ONLINE_PRIVACY_URL = "https://kiwanosaxena.github.io/Roll-by-avikalabs/privacy"
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
 
-private val KNOWN_HEADINGS = setOf(
-    "Privacy Policy for Roll",
-    "# Privacy Policy for Roll",
-    "The short version",
-    "## The short version",
-    "Information we collect",
-    "## Information we collect",
-    "Your photos and folders",
-    "## Your photos and folders",
-    "Roll Pro purchases",
-    "## Roll Pro purchases",
-    "Information stored on your device",
-    "## Information stored on your device",
-    "Device backups",
-    "## Device backups",
-    "Permissions Roll uses",
-    "## Permissions Roll uses",
-    "Third-party services",
-    "## Third-party services",
-    "Children’s privacy",
-    "Children's privacy",
-    "Children\'s privacy",
-    "## Children’s privacy",
-    "## Children's privacy",
-    "## Children\'s privacy",
-    "Security",
-    "## Security",
-    "Changes to this policy",
-    "## Changes to this policy",
-    "Contact us",
-    "## Contact us"
-)
+private const val ONLINE_PRIVACY_URL = "https://kiwanosaxena.github.io/Roll-by-avikalabs/privacy"
 
 @Composable
 fun PrivacyPolicyScreen(
@@ -141,25 +114,12 @@ fun PrivacyPolicyScreen(
                         .padding(18.dp)
                 ) {
                     val lines = fullPolicyText.split("\n")
-                    var inListSection = false
 
                     lines.forEach { line ->
                         val trimmed = line.trim()
                         when {
                             trimmed.isEmpty() -> {
-                                Spacer(modifier = Modifier.height(10.dp))
-                                inListSection = false
-                            }
-                            trimmed in KNOWN_HEADINGS -> {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = trimmed,
-                                    fontSize = if (trimmed == "Privacy Policy for Roll") 18.sp else 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = glassColors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                inListSection = false
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
                             trimmed.startsWith("Effective date:") -> {
                                 Text(
@@ -170,20 +130,34 @@ fun PrivacyPolicyScreen(
                                     modifier = Modifier.padding(bottom = 6.dp)
                                 )
                             }
-                            trimmed.startsWith("Set wallpaper:") ||
-                            trimmed.startsWith("Run at startup:") ||
-                            trimmed.startsWith("Photo and folder access:") ||
-                            trimmed.startsWith("the list of") ||
-                            trimmed.startsWith("your timer") ||
-                            trimmed.startsWith("app preferences") ||
-                            trimmed.startsWith("Roll does not upload") ||
-                            trimmed.startsWith("Roll keeps permission") ||
-                            trimmed.startsWith("If you add a folder") ||
-                            trimmed.startsWith("You can remove any") -> {
+                            trimmed.startsWith("# ") -> {
+                                val title = trimmed.removePrefix("# ").trim()
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = title,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = glassColors.textPrimary
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                            trimmed.startsWith("## ") -> {
+                                val section = trimmed.removePrefix("## ").trim()
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Text(
+                                    text = section,
+                                    fontSize = 15.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = glassColors.textPrimary
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                            trimmed.startsWith("- ") -> {
+                                val bulletText = trimmed.removePrefix("- ").trim()
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 2.dp, horizontal = 4.dp),
+                                        .padding(vertical = 2.5.dp, horizontal = 4.dp),
                                     verticalAlignment = Alignment.Top
                                 ) {
                                     Text(
@@ -193,21 +167,29 @@ fun PrivacyPolicyScreen(
                                         color = AccentSunset,
                                         modifier = Modifier.padding(end = 8.dp)
                                     )
-                                    Text(
-                                        text = trimmed,
-                                        fontSize = 13.5.sp,
-                                        lineHeight = 20.sp,
-                                        color = glassColors.textSecondary
+                                    RenderFormattedText(
+                                        text = bulletText,
+                                        textColor = glassColors.textSecondary,
+                                        linkColor = AccentSunset,
+                                        onLinkClick = { url ->
+                                            try {
+                                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                            } catch (_: Exception) {}
+                                        }
                                     )
                                 }
                             }
                             else -> {
-                                Text(
+                                RenderFormattedText(
                                     text = trimmed,
-                                    fontSize = 13.5.sp,
-                                    lineHeight = 20.sp,
-                                    color = glassColors.textSecondary,
-                                    modifier = Modifier.padding(vertical = 2.dp)
+                                    textColor = glassColors.textSecondary,
+                                    linkColor = AccentSunset,
+                                    modifier = Modifier.padding(vertical = 2.5.dp),
+                                    onLinkClick = { url ->
+                                        try {
+                                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                        } catch (_: Exception) {}
+                                    }
                                 )
                             }
                         }
@@ -247,8 +229,91 @@ fun PrivacyPolicyScreen(
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+}
+
+/**
+ * Parses inline markdown:
+ * - Text wrapped in **bold** -> shown in bold without asterisks
+ * - [label](url) links -> shown in linkColor with underline and clickable
+ */
+@Composable
+private fun RenderFormattedText(
+    text: String,
+    textColor: androidx.compose.ui.graphics.Color,
+    linkColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier,
+    onLinkClick: (String) -> Unit
+) {
+    val annotatedString = buildAnnotatedString {
+        // Regex matches [link text](url) or **bold text**
+        val regex = Regex("""\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*""")
+        var currentIndex = 0
+
+        for (match in regex.findAll(text)) {
+            val range = match.range
+            if (range.first > currentIndex) {
+                append(text.substring(currentIndex, range.first))
+            }
+
+            val linkLabel = match.groups[1]?.value
+            val linkUrl = match.groups[2]?.value
+            val boldContent = match.groups[3]?.value
+
+            if (linkLabel != null && linkUrl != null) {
+                val start = length
+                append(linkLabel)
+                val end = length
+                addStyle(
+                    style = SpanStyle(
+                        color = linkColor,
+                        fontWeight = FontWeight.Medium,
+                        textDecoration = TextDecoration.Underline
+                    ),
+                    start = start,
+                    end = end
+                )
+                addStringAnnotation(
+                    tag = "URL",
+                    annotation = linkUrl,
+                    start = start,
+                    end = end
+                )
+            } else if (boldContent != null) {
+                val start = length
+                append(boldContent)
+                val end = length
+                addStyle(
+                    style = SpanStyle(fontWeight = FontWeight.Bold),
+                    start = start,
+                    end = end
+                )
+            }
+
+            currentIndex = range.last + 1
+        }
+
+        if (currentIndex < text.length) {
+            append(text.substring(currentIndex))
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    ClickableText(
+        text = annotatedString,
+        modifier = modifier,
+        style = androidx.compose.ui.text.TextStyle(
+            color = textColor,
+            fontSize = 13.5.sp,
+            lineHeight = 20.sp
+        ),
+        onClick = { offset ->
+            annotatedString.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                .firstOrNull()?.let { annotation ->
+                    onLinkClick(annotation.item)
+                }
+        }
+    )
 }

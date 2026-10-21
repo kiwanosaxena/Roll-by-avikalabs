@@ -82,6 +82,15 @@ import com.avikalabs.roll.ui.theme.RollTheme
 import com.avikalabs.roll.ui.screens.RollProScreen
 import com.avikalabs.roll.wallpaper.WallpaperApplier
 
+import androidx.compose.runtime.CompositionLocalProvider
+import com.avikalabs.roll.ui.tutorial.LocalTutorialState
+import com.avikalabs.roll.ui.tutorial.TutorialState
+import com.avikalabs.roll.ui.tutorial.TutorialTargetRegistrar
+import com.avikalabs.roll.ui.tutorial.CoachMarkOverlay
+import com.avikalabs.roll.ui.tutorial.TutorialStep
+import com.avikalabs.roll.ui.tutorial.TutorialTipSet
+import com.avikalabs.roll.ui.tutorial.tutorialTarget
+
 class MainActivity : ComponentActivity() {
 
     private val viewModel: RollViewModel by viewModels()
@@ -96,13 +105,19 @@ class MainActivity : ComponentActivity() {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             val targetRoute by navigateToRoute
 
-            RollTheme(themeMode = uiState.themeMode) {
-                MainAppContent(
-                    uiState = uiState,
-                    viewModel = viewModel,
-                    initialRoute = targetRoute,
-                    onRouteHandled = { navigateToRoute.value = null }
-                )
+            val tutorialState = remember { TutorialState() }
+            TutorialTargetRegistrar.state = tutorialState
+
+            CompositionLocalProvider(LocalTutorialState provides tutorialState) {
+                RollTheme(themeMode = uiState.themeMode) {
+                    MainAppContent(
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        initialRoute = targetRoute,
+                        onRouteHandled = { navigateToRoute.value = null },
+                        tutorialState = tutorialState
+                    )
+                }
             }
         }
     }
@@ -147,7 +162,8 @@ fun MainAppContent(
     uiState: RollUiState,
     viewModel: RollViewModel,
     initialRoute: String? = null,
-    onRouteHandled: () -> Unit = {}
+    onRouteHandled: () -> Unit = {},
+    tutorialState: TutorialState = LocalTutorialState.current
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -180,6 +196,249 @@ fun MainAppContent(
         uiState.proStatusMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearProStatusMessage()
+        }
+    }
+
+    // Coach Mark Tutorial Trigger Logic
+    // Never show if tutorials_disabled, or while action sheet, dialog, Pro screen, Privacy Policy screen are open.
+    val isBlockedScreen = showActionSheet ||
+            tutorialState.isDialogActive ||
+            currentRoute == NavRoutes.PRO ||
+            currentRoute == NavRoutes.PRIVACY_POLICY
+
+    LaunchedEffect(
+        currentRoute,
+        isBlockedScreen,
+        uiState.tutorialsDisabled,
+        uiState.finishedTipSets,
+        uiState.activeTarget,
+        uiState.totalItemCount,
+        uiState.homeItems.size,
+        uiState.lockItems.size,
+        uiState.isPro,
+        isLiveWallpaperActive
+    ) {
+        if (uiState.tutorialsDisabled || isBlockedScreen) {
+            if (tutorialState.currentTipSet != null && (currentRoute == NavRoutes.PRO || currentRoute == NavRoutes.PRIVACY_POLICY)) {
+                tutorialState.dismiss()
+            }
+            return@LaunchedEffect
+        }
+
+        val finished = uiState.finishedTipSets
+
+        // 1. PICKER SCREEN
+        if (currentRoute == NavRoutes.PICKER) {
+            when {
+                // "picker_empty" (first launch, no photos yet on home screen)
+                uiState.activeTarget == WallpaperTarget.HOME && uiState.totalItemCount == 0 && !finished.contains("picker_empty") -> {
+                    tutorialState.currentTipSet = TutorialTipSet(
+                        id = "picker_empty",
+                        steps = listOf(
+                            TutorialStep(
+                                id = "step_empty_toggle",
+                                targetId = "target_toggle",
+                                textResId = R.string.tutorial_picker_empty_target_toggle
+                            ),
+                            TutorialStep(
+                                id = "step_empty_add",
+                                targetId = "empty_add_circle",
+                                textResId = R.string.tutorial_picker_empty_add_circle
+                            ),
+                            TutorialStep(
+                                id = "step_empty_settings",
+                                targetId = "btn_settings",
+                                textResId = R.string.tutorial_picker_empty_settings
+                            )
+                        )
+                    )
+                    tutorialState.currentStepIndex = 0
+                }
+
+                // "picker_photos" (the first time the Picker shows photos on home screen)
+                uiState.activeTarget == WallpaperTarget.HOME && uiState.totalItemCount > 0 && !finished.contains("picker_photos") -> {
+                    val addTileTextRes = if (uiState.isPro) {
+                        R.string.tutorial_picker_photos_add_pro
+                    } else {
+                        R.string.tutorial_picker_photos_add_free
+                    }
+                    tutorialState.currentTipSet = TutorialTipSet(
+                        id = "picker_photos",
+                        steps = listOf(
+                            TutorialStep(
+                                id = "step_photos_first_card",
+                                targetId = "first_photo_card",
+                                textResId = R.string.tutorial_picker_photos_first_card
+                            ),
+                            TutorialStep(
+                                id = "step_photos_add_tile",
+                                targetId = "add_tile_cell",
+                                textResId = addTileTextRes
+                            ),
+                            TutorialStep(
+                                id = "step_photos_next",
+                                targetId = "btn_next",
+                                textResId = R.string.tutorial_picker_photos_next
+                            ),
+                            TutorialStep(
+                                id = "step_photos_tab_roll",
+                                targetId = "tab_roll",
+                                textResId = R.string.tutorial_picker_photos_tab_roll
+                            )
+                        )
+                    )
+                    tutorialState.currentStepIndex = 0
+                }
+
+                // "picker_lock_free" (the first time a free user opens the Lock tab)
+                uiState.activeTarget == WallpaperTarget.LOCK && !uiState.isPro && !finished.contains("picker_lock_free") -> {
+                    tutorialState.currentTipSet = TutorialTipSet(
+                        id = "picker_lock_free",
+                        steps = listOf(
+                            TutorialStep(
+                                id = "step_lock_free_pro_card",
+                                targetId = "btn_unlock_lock_screen_pro",
+                                textResId = R.string.tutorial_picker_lock_free
+                            )
+                        )
+                    )
+                    tutorialState.currentStepIndex = 0
+                }
+
+                // "picker_lock_pro" (the first time a Pro user opens the Lock tab, including right after upgrading)
+                uiState.activeTarget == WallpaperTarget.LOCK && uiState.isPro && !finished.contains("picker_lock_pro") -> {
+                    val targetId = if (isLiveWallpaperActive) "checkbox_unlock_mode" else "link_set_live_wallpaper"
+                    val textRes = if (isLiveWallpaperActive) {
+                        R.string.tutorial_picker_lock_pro_unlock
+                    } else {
+                        R.string.tutorial_picker_lock_pro_live_wallpaper
+                    }
+                    tutorialState.currentTipSet = TutorialTipSet(
+                        id = "picker_lock_pro",
+                        steps = listOf(
+                            TutorialStep(
+                                id = "step_lock_pro_unlock",
+                                targetId = targetId,
+                                textResId = textRes
+                            )
+                        )
+                    )
+                    tutorialState.currentStepIndex = 0
+                }
+            }
+        }
+
+        // 2. DURATION SETUP SCREEN — "duration" (first visit)
+        if (currentRoute?.startsWith("duration_setup") == true) {
+            val durationItems = if (uiState.activeTarget == WallpaperTarget.HOME) uiState.homeItems else uiState.lockItems
+            if (durationItems.isNotEmpty() && !finished.contains("duration")) {
+                tutorialState.currentTipSet = TutorialTipSet(
+                    id = "duration",
+                    steps = listOf(
+                        TutorialStep(
+                            id = "step_duration_mode",
+                            targetId = "mode_per_item",
+                            textResId = R.string.tutorial_duration_mode_toggle
+                        ),
+                        TutorialStep(
+                            id = "step_duration_first_card",
+                            targetId = "duration_first_card",
+                            textResId = R.string.tutorial_duration_first_card
+                        ),
+                        TutorialStep(
+                            id = "step_duration_apply_all",
+                            targetId = "btn_apply_to_all",
+                            textResId = R.string.tutorial_duration_apply_to_all
+                        ),
+                        TutorialStep(
+                            id = "step_duration_next",
+                            targetId = "btn_duration_next",
+                            textResId = R.string.tutorial_duration_next
+                        )
+                    )
+                )
+                tutorialState.currentStepIndex = 0
+            }
+        }
+
+        // 3. THE ROLL SCREEN — "roll" (first visit)
+        if (currentRoute == NavRoutes.THE_ROLL) {
+            val rollItems = if (uiState.activeTarget == WallpaperTarget.HOME) uiState.homeItems else uiState.lockItems
+            if (rollItems.isNotEmpty() && !finished.contains("roll") && !tutorialState.isDialogActive) {
+                val playbackTextRes = if (uiState.isPro) {
+                    R.string.tutorial_roll_playback_pro
+                } else {
+                    R.string.tutorial_roll_playback_free
+                }
+                tutorialState.currentTipSet = TutorialTipSet(
+                    id = "roll",
+                    steps = listOf(
+                        TutorialStep(
+                            id = "step_roll_playback",
+                            targetId = "playback_sequential",
+                            textResId = playbackTextRes
+                        ),
+                        TutorialStep(
+                            id = "step_roll_drag_handle",
+                            targetId = "drag_handle_0",
+                            textResId = R.string.tutorial_roll_drag_handle
+                        ),
+                        TutorialStep(
+                            id = "step_roll_options",
+                            targetId = "options_button_0",
+                            textResId = R.string.tutorial_roll_options
+                        ),
+                        TutorialStep(
+                            id = "step_roll_add_frame",
+                            targetId = "the_roll_add_frame_tile",
+                            textResId = R.string.tutorial_roll_add_frame
+                        ),
+                        TutorialStep(
+                            id = "step_roll_execute",
+                            targetId = "btn_execute",
+                            textResId = R.string.tutorial_roll_execute
+                        )
+                    )
+                )
+                tutorialState.currentStepIndex = 0
+            }
+        }
+
+        // 4. SETTINGS SCREEN — "settings" (first visit)
+        if (currentRoute == NavRoutes.SETTINGS) {
+            if (!finished.contains("settings")) {
+                val proRowTextRes = if (uiState.isPro) {
+                    R.string.tutorial_settings_pro_active
+                } else {
+                    R.string.tutorial_settings_pro_free
+                }
+                tutorialState.currentTipSet = TutorialTipSet(
+                    id = "settings",
+                    steps = listOf(
+                        TutorialStep(
+                            id = "step_settings_pro",
+                            targetId = "btn_settings_unlock_pro",
+                            textResId = proRowTextRes
+                        ),
+                        TutorialStep(
+                            id = "step_settings_live_wallpaper",
+                            targetId = "btn_set_live_wallpaper",
+                            textResId = R.string.tutorial_settings_live_wallpaper
+                        ),
+                        TutorialStep(
+                            id = "step_settings_double_tap",
+                            targetId = "checkbox_double_tap",
+                            textResId = R.string.tutorial_settings_double_tap
+                        ),
+                        TutorialStep(
+                            id = "step_settings_restore",
+                            targetId = "row_restore_purchases",
+                            textResId = R.string.tutorial_settings_restore
+                        )
+                    )
+                )
+                tutorialState.currentStepIndex = 0
+            }
         }
     }
 
@@ -341,7 +600,8 @@ fun MainAppContent(
                         onNavigatePrivacyPolicy = { navController.navigate(NavRoutes.PRIVACY_POLICY) },
                         isPro = uiState.isPro,
                         onNavigatePro = { navController.navigate(NavRoutes.PRO) },
-                        onRestorePurchases = { viewModel.restorePurchases() }
+                        onRestorePurchases = { viewModel.restorePurchases() },
+                        onResetTutorials = { viewModel.resetTutorials() }
                     )
                 }
 
@@ -394,6 +654,20 @@ fun MainAppContent(
                 onNavigatePro = {
                     showActionSheet = false
                     navController.navigate(NavRoutes.PRO)
+                }
+            )
+        }
+
+        // First-run Coach Mark Tutorial Overlay
+        if (!uiState.tutorialsDisabled && !isBlockedScreen && tutorialState.currentTipSet != null) {
+            CoachMarkOverlay(
+                tutorialState = tutorialState,
+                onStepCompleted = { tipSetId ->
+                    viewModel.markTipSetFinished(tipSetId)
+                },
+                onNeverShowAgain = {
+                    tutorialState.currentTipSet?.id?.let { viewModel.markTipSetFinished(it) }
+                    viewModel.setTutorialsDisabled(true)
                 }
             )
         }
@@ -465,6 +739,7 @@ fun RollTopAppBar(
                     .size(40.dp)
                     .clip(CircleShape)
                     .testTag("btn_settings")
+                    .tutorialTarget("btn_settings")
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Settings,
@@ -523,7 +798,10 @@ fun RollBottomNavigation(
                                 indication = null,
                                 role = Role.Tab
                             ) { onNavigate(route) }
-                            .testTag("nav_${label.lowercase().replace(" ", "_")}"),
+                            .testTag("nav_${label.lowercase().replace(" ", "_")}")
+                            .then(
+                                if (route == NavRoutes.THE_ROLL) Modifier.tutorialTarget("tab_roll") else Modifier
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(

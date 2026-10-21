@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import com.avikalabs.roll.ui.tutorial.tutorialTarget
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +86,7 @@ fun SettingsScreen(
     isPro: Boolean = false,
     onNavigatePro: () -> Unit = {},
     onRestorePurchases: () -> Unit = {},
+    onResetTutorials: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -127,7 +129,8 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
                         .clickable { onNavigatePro() }
-                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                        .padding(vertical = 4.dp, horizontal = 4.dp)
+                        .tutorialTarget("btn_settings_unlock_pro"),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -174,7 +177,9 @@ fun SettingsScreen(
                                 contentColor = Color.White
                             ),
                             shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.testTag("btn_settings_unlock_pro")
+                            modifier = Modifier
+                                .testTag("btn_settings_unlock_pro")
+                                .tutorialTarget("btn_settings_unlock_pro")
                         ) {
                             Text(
                                 text = stringResource(R.string.pro_unlock_button_default),
@@ -187,7 +192,9 @@ fun SettingsScreen(
                             imageVector = Icons.Outlined.ChevronRight,
                             contentDescription = null,
                             tint = glassColors.textSecondary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier
+                                .size(18.dp)
+                                .tutorialTarget("btn_settings_unlock_pro")
                         )
                     }
                 }
@@ -203,7 +210,8 @@ fun SettingsScreen(
                         .clip(RoundedCornerShape(10.dp))
                         .clickable { onRestorePurchases() }
                         .padding(vertical = 4.dp, horizontal = 4.dp)
-                        .testTag("row_restore_purchases"),
+                        .testTag("row_restore_purchases")
+                        .tutorialTarget("row_restore_purchases"),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -309,6 +317,63 @@ fun SettingsScreen(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = glassColors.glassBorder.copy(alpha = 0.35f))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Show tips again row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onResetTutorials() }
+                        .padding(vertical = 4.dp, horizontal = 4.dp)
+                        .testTag("row_show_tips_again"),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(glassColors.glassBorder.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Restore,
+                                contentDescription = null,
+                                tint = AccentSunset,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = stringResource(R.string.settings_show_tips_again),
+                                fontSize = 14.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = glassColors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Restart all onboarding tutorials and tips",
+                                fontSize = 12.sp,
+                                color = glassColors.textSecondary
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Outlined.ChevronRight,
+                        contentDescription = null,
+                        tint = glassColors.textSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
 
@@ -371,7 +436,9 @@ fun SettingsScreen(
                                 contentColor = Color.White
                             ),
                             shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.testTag("btn_set_live_wallpaper")
+                            modifier = Modifier
+                                .testTag("btn_set_live_wallpaper")
+                                .tutorialTarget("btn_set_live_wallpaper")
                         ) {
                             Text(
                                 text = "Set as live wallpaper",
@@ -416,7 +483,9 @@ fun SettingsScreen(
                             disabledCheckedColor = AccentSunset.copy(alpha = 0.4f),
                             disabledUncheckedColor = glassColors.textSecondary.copy(alpha = 0.4f)
                         ),
-                        modifier = Modifier.testTag("checkbox_double_tap")
+                        modifier = Modifier
+                            .testTag("checkbox_double_tap")
+                            .tutorialTarget("checkbox_double_tap")
                     )
                     Column(modifier = Modifier.padding(start = 6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

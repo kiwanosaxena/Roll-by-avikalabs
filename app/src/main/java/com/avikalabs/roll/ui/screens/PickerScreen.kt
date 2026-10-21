@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.avikalabs.roll.ui.tutorial.tutorialTarget
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -182,6 +183,7 @@ fun PickerScreen(
                             modifier = Modifier
                                 .height(44.dp)
                                 .testTag("btn_unlock_lock_screen_pro")
+                                .tutorialTarget("btn_unlock_lock_screen_pro")
                         ) {
                             Text(
                                 text = stringResource(R.string.pro_btn_unlock),
@@ -270,7 +272,8 @@ fun PickerScreen(
                                 Modifier
                             }
                         )
-                        .padding(horizontal = 4.dp),
+                        .padding(horizontal = 4.dp)
+                        .tutorialTarget("checkbox_unlock_mode"),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Checkbox(
@@ -315,6 +318,7 @@ fun PickerScreen(
                                         onSetLiveWallpaperClick()
                                     }
                                     .padding(vertical = 2.dp)
+                                    .tutorialTarget("link_set_live_wallpaper")
                             )
                         }
                     }
@@ -330,7 +334,9 @@ fun PickerScreen(
                 onClick = onNextClick,
                 enabled = hasPhotos,
                 testTag = "btn_next",
-                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                modifier = Modifier
+                    .padding(top = 4.dp, bottom = 4.dp)
+                    .tutorialTarget("btn_next")
             )
 
             if (!hasPhotos) {
@@ -362,9 +368,11 @@ fun PhotoGrid(
         modifier = modifier.fillMaxSize()
     ) {
         items(items, key = { it.id }) { item ->
+            val isFirst = items.firstOrNull()?.id == item.id
             ThumbnailItem(
                 item = item,
                 isUnlockMode = (activeTarget == WallpaperTarget.LOCK && autoChangeOnUnlock),
+                isFirst = isFirst,
                 onRemove = { onRemoveItem(item.id) }
             )
         }
@@ -380,6 +388,7 @@ fun PhotoGrid(
 private fun ThumbnailItem(
     item: WallpaperItem,
     isUnlockMode: Boolean,
+    isFirst: Boolean,
     onRemove: () -> Unit
 ) {
     val glassColors = LocalGlassColors.current
@@ -411,7 +420,10 @@ private fun ThumbnailItem(
                         }
                     )
                 }
-                .testTag("photo_card_${item.id}"),
+                .testTag("photo_card_${item.id}")
+                .then(
+                    if (isFirst) Modifier.tutorialTarget("first_photo_card") else Modifier
+                ),
             shape = RoundedCornerShape(14.dp)
         ) {
             AsyncImage(
@@ -511,7 +523,8 @@ private fun AddTile(
                 role = Role.Button
             ) { onClick() }
             .semantics { contentDescription = "Add another photo to roll" }
-            .testTag("add_tile_cell"),
+            .testTag("add_tile_cell")
+            .tutorialTarget("add_tile_cell"),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {

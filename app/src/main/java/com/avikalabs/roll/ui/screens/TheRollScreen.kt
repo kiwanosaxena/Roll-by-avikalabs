@@ -88,6 +88,8 @@ import com.avikalabs.roll.ui.components.GlassSegmentedToggle
 import com.avikalabs.roll.ui.theme.AccentSunset
 import com.avikalabs.roll.ui.theme.LocalGlassColors
 import com.avikalabs.roll.ui.theme.MonospaceBadgeStyle
+import com.avikalabs.roll.ui.tutorial.LocalTutorialState
+import com.avikalabs.roll.ui.tutorial.tutorialTarget
 import java.util.Collections
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -107,6 +109,7 @@ fun TheRollScreen(
     modifier: Modifier = Modifier
 ) {
     val glassColors = LocalGlassColors.current
+    val tutorialState = LocalTutorialState.current
 
     val handleAddClick = {
         if (!isPro && items.size >= 10) {
@@ -124,6 +127,10 @@ fun TheRollScreen(
     val rowSpacingPx = with(LocalDensity.current) { 8.dp.toPx() }
     val step = (if (rowHeightPx > 0f) rowHeightPx else 180f) + rowSpacingPx
     var showRollSetDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showRollSetDialog) {
+        tutorialState.isDialogActive = showRollSetDialog
+    }
 
     LaunchedEffect(items, activeTarget) {
         currentItems = items
@@ -333,7 +340,9 @@ fun TheRollScreen(
             },
             enabled = currentItems.isNotEmpty(),
             testTag = "btn_execute",
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .tutorialTarget("btn_execute")
         )
     }
     }
@@ -425,7 +434,8 @@ private fun RollRowItem(
                         )
                     }
                     .semantics { contentDescription = "Drag handle for frame ${index + 1}" }
-                    .testTag("drag_handle_$index"),
+                    .testTag("drag_handle_$index")
+                    .then(if (index == 0) Modifier.tutorialTarget("drag_handle_0") else Modifier),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -496,7 +506,10 @@ private fun RollRowItem(
             Box {
                 IconButton(
                     onClick = { showMenu = true },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier
+                        .size(36.dp)
+                        .testTag("btn_options_$index")
+                        .then(if (index == 0) Modifier.tutorialTarget("options_button_0", "btn_options_0") else Modifier)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.MoreVert,
@@ -560,7 +573,8 @@ private fun AddFrameBottomTile(onClick: () -> Unit) {
                 indication = null,
                 role = Role.Button
             ) { onClick() }
-            .testTag("the_roll_add_frame_tile"),
+            .testTag("the_roll_add_frame_tile")
+            .tutorialTarget("the_roll_add_frame_tile"),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -642,7 +656,8 @@ private fun PlaybackOrderToggle(
                                 onOrderSelected(order)
                             }
                         }
-                        .testTag("playback_${order.name.lowercase()}"),
+                        .testTag("playback_${order.name.lowercase()}")
+                        .tutorialTarget("playback_${order.name.lowercase()}", "playback_*"),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(

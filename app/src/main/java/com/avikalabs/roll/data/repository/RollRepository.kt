@@ -46,6 +46,13 @@ class RollRepository private constructor(
     fun getSyncedFolders(target: WallpaperTarget): Flow<List<SyncedFolder>> = dao.getSyncedFolders(target)
     suspend fun getAllSyncedFoldersSync(): List<SyncedFolder> = dao.getAllSyncedFoldersSync()
 
+    val finishedTipSetsFlow: Flow<Set<String>> = preferences.finishedTipSetsFlow
+    val tutorialsDisabledFlow: Flow<Boolean> = preferences.tutorialsDisabledFlow
+
+    suspend fun markTipSetFinished(tipSetId: String) = preferences.markTipSetFinished(tipSetId)
+    suspend fun setTutorialsDisabled(disabled: Boolean) = preferences.setTutorialsDisabled(disabled)
+    suspend fun resetTutorials() = preferences.resetTutorials()
+
     suspend fun setThemeMode(mode: ThemeMode) = preferences.setThemeMode(mode)
     suspend fun setHomeDoubleTapEnabled(enabled: Boolean) {
         preferences.setHomeDoubleTapEnabled(enabled)

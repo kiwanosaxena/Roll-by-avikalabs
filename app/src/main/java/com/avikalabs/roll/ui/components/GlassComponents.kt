@@ -44,6 +44,8 @@ import com.avikalabs.roll.data.model.WallpaperTarget
 import com.avikalabs.roll.ui.theme.AccentSunset
 import com.avikalabs.roll.ui.theme.LocalGlassColors
 
+import com.avikalabs.roll.ui.tutorial.tutorialTarget
+
 @Composable
 fun GlassBox(
     modifier: Modifier = Modifier,
@@ -77,7 +79,8 @@ fun GlassSegmentedToggle(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp)
-            .padding(4.dp),
+            .padding(4.dp)
+            .tutorialTarget("target_toggle"),
         shape = RoundedCornerShape(24.dp)
     ) {
         Row(

@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.avikalabs.roll.data.model.WallpaperTarget
 import com.avikalabs.roll.ui.theme.AccentSunset
 import com.avikalabs.roll.ui.theme.LocalGlassColors
+import com.avikalabs.roll.ui.tutorial.tutorialTarget
 
 /**
  * EmptyStateBody contains ONLY the centered body content:
@@ -63,7 +64,8 @@ fun EmptyStateBody(
                     role = Role.Button
                 ) { onAddClick() }
                 .semantics { contentDescription = "Add photos to start your roll" }
-                .testTag("empty_add_circle"),
+                .testTag("empty_add_circle")
+                .tutorialTarget("empty_add_circle"),
             contentAlignment = Alignment.Center
         ) {
             // Dashed Circle Border

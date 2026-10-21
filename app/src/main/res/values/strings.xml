@@ -73,10 +73,6 @@
 
 # Privacy Policy for Roll
 
-**Effective date:** October 20, 2026
-**Developer:** Avikalabs
-**Contact:** avikalabs@gmail.com
-
 Roll is a wallpaper app for Android that rotates your own photos on your home screen and lock screen. This policy explains what Roll does, and does not do, with your information.
 
 ## The short version
@@ -178,4 +174,55 @@ If you have any questions about this policy or about Roll, email **avikalabs@gma
     <string name="pro_restore_success">Purchases restored successfully</string>
     <string name="pro_restore_no_purchases">No purchases found to restore</string>
     <string name="pro_limit_reached_message">Free mode is limited to 10 photos. Upgrade to Roll Pro for unlimited photos.</string>
+
+    <!-- Coach Mark Tutorial Strings -->
+    <string name="tutorial_btn_next">Next</string>
+    <string name="tutorial_btn_skip">Skip</string>
+    <string name="tutorial_btn_got_it">Got it</string>
+    <string name="tutorial_btn_never_show">Never show tips again</string>
+    <string name="tutorial_step_counter">%1$d / %2$d</string>
+
+    <!-- picker_empty -->
+    <string name="tutorial_picker_empty_target_toggle">Pick which screen this roll is for</string>
+    <string name="tutorial_picker_empty_add_circle">Start here: add your photos</string>
+    <string name="tutorial_picker_empty_settings">Theme, live wallpaper &amp; Roll Pro live here</string>
+
+    <!-- picker_photos -->
+    <string name="tutorial_picker_photos_first_card">Long-press a photo to remove it</string>
+    <string name="tutorial_picker_photos_add_free">Add more photos (Up to 10 free – unlimited with Pro)</string>
+    <string name="tutorial_picker_photos_add_pro">Add more photos</string>
+    <string name="tutorial_picker_photos_next">Next: choose how long each photo stays</string>
+    <string name="tutorial_picker_photos_tab_roll">Reorder and start your roll here</string>
+
+    <!-- picker_lock_free -->
+    <string name="tutorial_picker_lock_free">Free: your lock screen shows the same photos as home. Pro gives it its own roll</string>
+
+    <!-- picker_lock_pro -->
+    <string name="tutorial_picker_lock_pro_unlock">Change the lock screen every time you unlock</string>
+    <string name="tutorial_picker_lock_pro_live_wallpaper">Set Roll as live wallpaper first</string>
+
+    <!-- duration -->
+    <string name="tutorial_duration_mode_toggle">Time each photo separately, or one timer for all</string>
+    <string name="tutorial_duration_first_card">Tap a photo to set how long it stays</string>
+    <string name="tutorial_duration_apply_to_all">Use one time for every photo</string>
+    <string name="tutorial_duration_next">Next: review and start</string>
+
+    <!-- roll -->
+    <string name="tutorial_roll_playback_free">Shuffle is a Pro feature</string>
+    <string name="tutorial_roll_playback_pro">Play in order or shuffle</string>
+    <string name="tutorial_roll_drag_handle">Drag to reorder</string>
+    <string name="tutorial_roll_options">Move or remove a photo</string>
+    <string name="tutorial_roll_add_frame">Add more photos</string>
+    <string name="tutorial_roll_execute">Tap Execute to start your roll</string>
+
+    <!-- settings -->
+    <string name="tutorial_settings_pro_free">Unlock everything with a one-time payment</string>
+    <string name="tutorial_settings_pro_active">Thanks for going Pro!</string>
+    <string name="tutorial_settings_live_wallpaper">Needed for double-tap and change on unlock</string>
+    <string name="tutorial_settings_double_tap">Double-tap your home screen for the next photo</string>
+    <string name="tutorial_settings_restore">New phone? Restore Pro here</string>
+
+    <!-- settings row -->
+    <string name="settings_show_tips_again">Show tips again</string>
+    <string name="settings_tips_will_show_again">Tips will show again</string>
 </resources>

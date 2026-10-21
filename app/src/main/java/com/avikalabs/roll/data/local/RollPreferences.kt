@@ -74,6 +74,57 @@ class RollPreferences(private val context: Context) {
         }
     }
 
+    private val KEY_FINISHED_TIP_SETS = androidx.datastore.preferences.core.stringSetPreferencesKey("finished_tip_sets")
+    private val KEY_TUTORIALS_DISABLED = booleanPreferencesKey("tutorials_disabled")
+
+    val finishedTipSetsFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+        preferences[KEY_FINISHED_TIP_SETS] ?: emptySet()
+    }
+
+    val tutorialsDisabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_TUTORIALS_DISABLED] ?: false
+    }
+
+    suspend fun markTipSetFinished(tipSetId: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[KEY_FINISHED_TIP_SETS] ?: emptySet()
+            preferences[KEY_FINISHED_TIP_SETS] = current + tipSetId
+        }
+    }
+
+    suspend fun setTutorialsDisabled(disabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_TUTORIALS_DISABLED] = disabled
+        }
+    }
+
+    suspend fun resetTutorials() {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_FINISHED_TIP_SETS] = emptySet()
+            preferences[KEY_TUTORIALS_DISABLED] = false
+        }
+    }
+
+    fun isTutorialDisabledSync(): Boolean {
+        return try {
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                context.dataStore.data.first()[KEY_TUTORIALS_DISABLED] ?: false
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun getFinishedTipSetsSync(): Set<String> {
+        return try {
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                context.dataStore.data.first()[KEY_FINISHED_TIP_SETS] ?: emptySet()
+            }
+        } catch (_: Exception) {
+            emptySet()
+        }
+    }
+
     suspend fun isHomeDoubleTapEnabledSync(): Boolean {
         return try {
             context.dataStore.data.first()[KEY_HOME_DOUBLE_TAP_ENABLED] ?: false

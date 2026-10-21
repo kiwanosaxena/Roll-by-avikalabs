@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.avikalabs.roll.R
 import com.avikalabs.roll.RollApplication
 import com.avikalabs.roll.billing.BillingManager
+import com.avikalabs.roll.billing.IBillingManager
 import com.avikalabs.roll.data.local.ThemeMode
 import com.avikalabs.roll.data.model.DurationMode
 import com.avikalabs.roll.data.model.PlaybackOrder
@@ -38,13 +39,20 @@ data class RollUiState(
     val isPro: Boolean = false,
     val proPrice: String? = null,
     val isBillingAvailable: Boolean = true,
-    val proStatusMessage: String? = null
+    val proStatusMessage: String? = null,
+    val finishedTipSets: Set<String> = emptySet(),
+    val tutorialsDisabled: Boolean = false
 )
 
-class RollViewModel(application: Application) : AndroidViewModel(application) {
+class RollViewModel @JvmOverloads constructor(
+    application: Application,
+    customBillingManager: IBillingManager? = null
+) : AndroidViewModel(application) {
 
     private val repository = RollRepository.getInstance(application)
-    val billingManager = (application as? RollApplication)?.billingManager ?: BillingManager.getInstance(application)
+    val billingManager: IBillingManager = customBillingManager
+        ?: (application as? RollApplication)?.billingManager
+        ?: BillingManager.getInstance(application)
 
     private val _activeTarget = MutableStateFlow(WallpaperTarget.HOME)
     val activeTarget: StateFlow<WallpaperTarget> = _activeTarget.asStateFlow()
@@ -75,7 +83,9 @@ class RollViewModel(application: Application) : AndroidViewModel(application) {
             billingManager.isPro,
             billingManager.formattedPrice,
             billingManager.isBillingAvailable,
-            billingManager.purchaseMessage
+            billingManager.purchaseMessage,
+            repository.finishedTipSetsFlow,
+            repository.tutorialsDisabledFlow
         )
     ) { values ->
         val target = values[0] as WallpaperTarget
@@ -92,6 +102,9 @@ class RollViewModel(application: Application) : AndroidViewModel(application) {
         val proPrice = values[9] as? String
         val isBillingAvailable = values[10] as Boolean
         val proStatusMessage = values[11] as? String
+        @Suppress("UNCHECKED_CAST")
+        val finishedTipSets = values[12] as Set<String>
+        val tutorialsDisabled = values[13] as Boolean
 
         RollUiState(
             activeTarget = target,
@@ -106,13 +119,34 @@ class RollViewModel(application: Application) : AndroidViewModel(application) {
             isPro = isPro,
             proPrice = proPrice,
             isBillingAvailable = isBillingAvailable,
-            proStatusMessage = proStatusMessage
+            proStatusMessage = proStatusMessage,
+            finishedTipSets = finishedTipSets,
+            tutorialsDisabled = tutorialsDisabled
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = RollUiState()
     )
+
+    fun markTipSetFinished(tipSetId: String) {
+        viewModelScope.launch {
+            repository.markTipSetFinished(tipSetId)
+        }
+    }
+
+    fun setTutorialsDisabled(disabled: Boolean) {
+        viewModelScope.launch {
+            repository.setTutorialsDisabled(disabled)
+        }
+    }
+
+    fun resetTutorials() {
+        viewModelScope.launch {
+            repository.resetTutorials()
+            _bannerMessage.value = getApplication<Application>().getString(R.string.settings_tips_will_show_again)
+        }
+    }
 
     fun setActiveTarget(target: WallpaperTarget) {
         _activeTarget.value = target

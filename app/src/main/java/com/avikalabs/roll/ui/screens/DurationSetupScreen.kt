@@ -38,6 +38,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,6 +69,8 @@ import com.avikalabs.roll.ui.components.GlassButton
 import com.avikalabs.roll.ui.theme.AccentSunset
 import com.avikalabs.roll.ui.theme.LocalGlassColors
 import com.avikalabs.roll.ui.theme.MonospaceBadgeStyle
+import com.avikalabs.roll.ui.tutorial.LocalTutorialState
+import com.avikalabs.roll.ui.tutorial.tutorialTarget
 
 @Composable
 fun DurationSetupScreen(
@@ -80,9 +84,14 @@ fun DurationSetupScreen(
     modifier: Modifier = Modifier
 ) {
     val glassColors = LocalGlassColors.current
+    val tutorialState = LocalTutorialState.current
     var selectedMode by remember(config.durationMode) { mutableStateOf(config.durationMode) }
     var globalDuration by remember(config.globalDurationSeconds) { mutableIntStateOf(config.globalDurationSeconds) }
     var showConfirmDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showConfirmDialog) {
+        tutorialState.isDialogActive = showConfirmDialog
+    }
 
     // Map of flipped state per item ID for 3D flip card
     val flippedStates = remember { mutableStateMapOf<String, Boolean>() }
@@ -112,7 +121,7 @@ fun DurationSetupScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(items, key = { it.id }) { item ->
+                    itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                         val isFlipped = flippedStates[item.id] ?: false
                         FlipCardItem(
                             item = item,
@@ -120,7 +129,8 @@ fun DurationSetupScreen(
                             onFlip = { flippedStates[item.id] = !isFlipped },
                             onDurationChanged = { newDuration ->
                                 onItemDurationChanged(item.id, newDuration)
-                            }
+                            },
+                            modifier = if (index == 0) Modifier.tutorialTarget("duration_first_card", "first_photo_card") else Modifier
                         )
                     }
                 }
@@ -190,6 +200,7 @@ fun DurationSetupScreen(
                             .fillMaxWidth(0.85f)
                             .height(46.dp)
                             .testTag("btn_apply_to_all")
+                            .tutorialTarget("btn_apply_to_all")
                     ) {
                         Text(
                             text = "Apply to all",
@@ -208,7 +219,9 @@ fun DurationSetupScreen(
             text = "Next",
             onClick = onNextClick,
             testTag = "btn_duration_next",
-            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+            modifier = Modifier
+                .padding(top = 4.dp, bottom = 8.dp)
+                .tutorialTarget("btn_duration_next", "btn_next")
         )
     }
 
@@ -257,7 +270,8 @@ private fun FlipCardItem(
     item: WallpaperItem,
     isFlipped: Boolean,
     onFlip: () -> Unit,
-    onDurationChanged: (Int) -> Unit
+    onDurationChanged: (Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val glassColors = LocalGlassColors.current
 
@@ -269,7 +283,7 @@ private fun FlipCardItem(
     )
 
     GlassBox(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .aspectRatio(5f / 7f)
             .graphicsLayer {
@@ -412,7 +426,8 @@ private fun ModeToggle(
                             indication = null,
                             role = Role.Tab
                         ) { onModeSelected(mode) }
-                        .testTag("mode_${mode.name.lowercase()}"),
+                        .testTag("mode_${mode.name.lowercase()}")
+                        .tutorialTarget("mode_${mode.name.lowercase()}", "duration_mode_toggle", "mode_*"),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
